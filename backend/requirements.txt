@@ -1,0 +1,18 @@
+# Framework Web principal
+fastapi
+
+# Serveur ASGI pour le développement et la production (Uvicorn est le plus courant)
+uvicorn[standard]
+
+# ORM recommandé pour son intégration avec FastAPI/Pydantic
+sqlmodel
+
+# Pour la gestion de l'authentification (OAuth2, JWT, etc.)
+python-jose[cryptography]
+
+# Gestion des variables d'environnement (pour les clés secrètes, URLs de DB, etc.)
+python-dotenv
+
+# Base de données (exemple pour PostgreSQL, ajustez selon votre choix)
+
+asyncpg
