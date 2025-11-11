@@ -13,6 +13,11 @@ python-jose[cryptography]
 # Gestion des variables d'environnement (pour les clés secrètes, URLs de DB, etc.)
 python-dotenv
 
-# Base de données (exemple pour PostgreSQL, ajustez selon votre choix)
-
+# Base de données Principale
 asyncpg
+
+# Stockage Cache, Messagerie et Temps Réel
+redis
+
+# envoie des mails
+fastapi-mail
