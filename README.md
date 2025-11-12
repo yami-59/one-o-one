@@ -14,7 +14,6 @@ Mettre en place la fondation de l'API REST et du stockage principal.
 
 * **Configuration de Base :** Initialisation du projet, configuration de **FastAPI**, de `uvicorn`, et du fichier `settings.py`.
 * **Base de Données Principale (PostgreSQL/SQLModel) :** Définition des modèles de base de données critiques : **`User`** et **`GameSession`** (pour stocker qui joue contre qui, et l'identifiant de partie `game_id`).
-* **Service Redis :** Configuration et connexion à Redis pour la gestion des données à haute vitesse et la messagerie.
 
 ### 2. 🔌 Implémentation du WebSocket (Temps Réel)
 
@@ -22,7 +21,6 @@ Le cœur de la communication et de la logique de jeu.
 
 * **Point d'Entrée WebSocket :** Création du `websocket_endpoint` (ex: `/ws/game/{game_id}`) pour accepter les connexions.
 * **Gestion du "Game State" :** Mise en place des fonctions pour lire et écrire l'état de la partie dans **Redis** (la position des pièces, le tour du joueur, le score temporaire).
-* **Système Pub/Sub :** Utilisation de Redis Pub/Sub pour router les actions d'un joueur à l'autre sans latence.
 
 ### 3. 🕹️ Implémentation du Jeu (Frontend & Logique)
 
@@ -115,5 +113,6 @@ Après la vérification, l'utilisateur est considéré comme authentifié tant q
 
 * **Rôle du Client (React) :** Stocke le JWT et l'ajoute à l'en-tête `Authorization` de **toutes les requêtes futures** vers les routes protégées (ex: `/api/v1/ranking`).
 * **Rôle du Backend (FastAPI) :** Le système de **Dépendances** (`Depends`) intercepte le jeton, utilise `python-jose` pour le décoder, vérifie sa signature et sa date d'expiration pour autoriser ou rejeter l'accès à la ressource demandée.
+
 
 
