@@ -1,0 +1,18 @@
+# Node / Vite
+node_modules
+dist
+*.local
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Docker
+*.log
