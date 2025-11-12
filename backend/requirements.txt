@@ -16,8 +16,5 @@ python-dotenv
 # Base de données Principale
 asyncpg
 
-# Stockage Cache, Messagerie et Temps Réel
-redis
-
 # envoie des mails
 fastapi-mail
