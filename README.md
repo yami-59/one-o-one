@@ -52,7 +52,6 @@ Afficher la progression des joueurs.
 * **Mise à jour du Score :** Au niveau du backend, implémenter la logique pour mettre à jour les scores dans la base de données après la fin d'une partie.
 * **Classement en Temps Réel (Redis Sorted Sets) :** Mettre en place la structure **Sorted Sets** dans Redis pour maintenir un classement des meilleurs joueurs mis à jour de manière instantanée.
 * **Endpoint API :** Création de la route `GET /api/v1/ranking` pour que le frontend affiche le classement.
-
 ---
 
 ## 🥉 Phase 3 : Améliorations et Fonctionnalités Sociales
@@ -64,55 +63,8 @@ Fonctionnalités améliorant l'expérience et l'engagement.
 * **Améliorations UI/UX :** Refonte des styles, animations et transitions (Frontend).
 * **Ajout d'Autres Jeux Simples :** Expansion de la logique de jeu pour inclure d'autres jeux (Quiz, Puissance 4, etc.).
 
-
-
 ---
 
-
-
-# 🛡️ Authentification sans Mot de Passe (Magic Code/OTP)
-
-Cette application utilise un système d'authentification moderne sans mot de passe basé sur des codes à usage unique (OTP) envoyés par email. Ce système améliore la sécurité (pas de stockage de mot de passe) et l'expérience utilisateur.
-
-
-## 🚀 Flux d'Authentification Détaillé
-
-Le processus se déroule en trois étapes principales, orchestrées par deux endpoints REST critiques :
-
-### 1. 📬 Étape 1 : Demande du Code (Request OTP)
-
-Cette étape initialise la session de connexion en demandant un code temporaire.
-
-* **Endpoint FastAPI :** `POST /api/v1/auth/request-code`
-
-| Composant | Rôle dans le Backend (FastAPI) |
-| :--- | :--- |
-| **Pydantic** | Valide que le **format de l'email** est correct. |
-| **Génération** | Génère un **Code OTP aléatoire** (ex: 6 chiffres). |
-| **POSTGRESQL** | **Stocke** la paire `(email: code)` avec une **Durée de Vie (TTL)** courte (ex: 5 minutes) pour l'empêcher d'être réutilisé ou d'expirer. |
-| **E-mailing** | Envoie l'e-mail contenant le code OTP au client. |
-| **Réponse HTTP** | Retourne une réponse **202 Accepted** (Accepté) au frontend. |
-
-### 2. 🔑 Étape 2 : Vérification du Code (Verify OTP)
-
-Le client utilise le code reçu pour prouver son identité.
-
-* **Endpoint FastAPI :** `POST /api/v1/auth/verify-code`
-
-| Composant | Rôle dans le Backend (FastAPI) |
-| :--- | :--- |
-| **Pydantic** | Reçoit et valide l'objet `EmailVerification(email: str, code: str)`. |
-| **POSTGRESQL** | **Vérifie** l'existence et la validité du code dans le cache. |
-| **Nettoyage** | **Supprime** le code de Redis immédiatement après utilisation pour garantir qu'il est à usage unique. |
-| **`python-jose`** | Si la vérification est réussie, **Génère un JWT (JSON Web Token)** contenant l'identité de l'utilisateur. |
-| **Réponse HTTP** | Retourne le JWT (le jeton de session) au frontend. |
-
-### 3. 🛡️ Étape 3 : Sessions Futures (Authentification par JWT)
-
-Après la vérification, l'utilisateur est considéré comme authentifié tant que son jeton de session est valide.
-
-* **Rôle du Client (React) :** Stocke le JWT et l'ajoute à l'en-tête `Authorization` de **toutes les requêtes futures** vers les routes protégées (ex: `/api/v1/ranking`).
-* **Rôle du Backend (FastAPI) :** Le système de **Dépendances** (`Depends`) intercepte le jeton, utilise `python-jose` pour le décoder, vérifie sa signature et sa date d'expiration pour autoriser ou rejeter l'accès à la ressource demandée.
 
 
 
