@@ -1,17 +1,23 @@
 
 
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import Dict, List, Any, Literal
+
 
 class GameStateBase(BaseModel):
     """
-    État générique de la partie (Parent de tous les schémas de jeu).
-    Contient les données partagées par tous les types de jeux.
+    Classe parent agnostique au tour. Définit l'état commun à tous les jeux.
     """
     
-    # Score en temps réel : Commun à tous les jeux
+    # Indique le type de jeu (Crucial pour le routage)
+    game_type: Literal["mot_mele", "quiz", "reflexe"] # Utilise Literal pour valider les types
+    
+    # 1. État de la partie
+    current_status: str = "lobby" # 'lobby', 'in_progress', 'paused', 'ended'
+    
+    # 2. Score en temps réel (toujours nécessaire)
     realtime_score: Dict[str, int] = {} # {identifier_joueur: score_actuel}
-
-    pass
-
+    
+    # 3. Données Spécifiques au Joueur (ex: prêt à jouer, vies restantes, etc.)
+    player_data: Dict[str, Dict[str, Any]] = {} # {identifier_joueur: {statut_specifique}}
 

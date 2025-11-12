@@ -5,8 +5,8 @@ from sqlmodel import Session, select
 from typing import Annotated, Dict, List
 
 from app.core.db import get_session
-from app.models.game import GameSession
-from app.models.game_schemas import BoardState # Pour le typage de l'état
+from app.models.gameSession import GameSession
+from app.models.gameSchemas import BoardState # Pour le typage de l'état
 
 router = APIRouter()
 

@@ -4,8 +4,7 @@ from gameSchemas import BoardState
 from datetime import datetime
 
 
-
-class Game_types(SQLModel,table=True):
-    type : Optional[str] = Field(default=None, primary_key=True)
-
-    pass
+# --- NOUVEAU MODÈLE pour valider les types de jeu ---
+class GameType(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    type: str = Field(unique=True) # Ex: "mot_mele", "quiz"

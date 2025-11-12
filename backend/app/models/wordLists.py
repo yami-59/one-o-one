@@ -6,7 +6,8 @@ from typing import List, Dict
 
 
 
-class word_lists(SQLModel,table=True):
+# Modèle pour les dictionnaires de mots (JSONB pour la liste de mots)
+class WordList(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
-    name : str | None
-    words : List[str] | None 
+    name: str = Field(unique=True) # Rendre le nom unique
+    words: List[str] = Field(default_factory=list)

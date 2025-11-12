@@ -7,8 +7,8 @@ from sqlmodel import Session, select
 
 from app.core.db import get_session # Dépendance Session DB
 from app.models.user import User, UserCreate
-from app.models.game import GameSession, GameSessionCreate
-from app.models.game_schemas import BoardState # Pour initialiser l'état du jeu
+from app.models.gameSession import GameSession, GameSessionCreate
+from app.models.gameSchemas import BoardState # Pour initialiser l'état du jeu
 
 router = APIRouter()
 
