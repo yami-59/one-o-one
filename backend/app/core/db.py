@@ -1,7 +1,7 @@
 # /backend/app/core/db.py
 
 from typing import AsyncGenerator
-from sqlmodel import SQLModel,create_engine
+from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.settings import settings
 from sqlalchemy.ext.asyncio import create_async_engine
