@@ -2,6 +2,8 @@
 
 from fastapi import Header,Depends
 from typing import Annotated
+from sqlmodel.ext.asyncio.session import AsyncSession
+from core.db import get_session
 
 async def get_player_identifier(
     # Tente de lire l'identifiant unique envoyé par le frontend (stocké en localStorage)
@@ -18,3 +20,4 @@ async def get_player_identifier(
 
 # Dépendance à utiliser dans les routeurs :
 PlayerIdentifierDep = Annotated[str | None, Depends(get_player_identifier)]
+SessionDep = Annotated[AsyncSession,Depends(get_session)]

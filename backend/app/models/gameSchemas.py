@@ -1,8 +1,8 @@
 
 
 from pydantic import BaseModel
-from typing import Dict, List, Any, Literal
-
+from typing import Dict, Any, Literal
+from utils.enums import GameTypes
 
 class GameStateBase(BaseModel):
     """
@@ -10,7 +10,7 @@ class GameStateBase(BaseModel):
     """
     
     # Indique le type de jeu (Crucial pour le routage)
-    game_type: Literal["mot_mele", "quiz", "reflexe"] # Utilise Literal pour valider les types
+    game_type: str
     
     
     # Score en temps réel (toujours nécessaire)

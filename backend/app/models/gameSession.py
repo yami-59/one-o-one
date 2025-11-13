@@ -1,4 +1,3 @@
-from typing import Optional
 from sqlmodel import Field, SQLModel
 from gameSchemas import GameStateBase
 from datetime import datetime
@@ -9,7 +8,7 @@ from utils.enums import Status
 
 
 class Game_session(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int|None = Field(default=None, primary_key=True)
     game_id: str = Field(index=True, unique=True)
     
     game_type: str = Field(foreign_key='gametype.type') 

@@ -3,8 +3,7 @@
 import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlmodel import AsyncSession, select
-from .dependencies import PlayerIdentifierDep
+from .dependencies import PlayerIdentifierDep,SessionDep
 from app.core.db import get_session # Dépendance Session DB
 from app.models.user import User, UserCreate
 from app.models.gameSession import GameSession, GameSessionCreate
@@ -25,7 +24,7 @@ WAITING_PLAYER_ID: str | None = None
 @router.post("/join-queue")
 async def join_queue(
     current_identifier: PlayerIdentifierDep,
-    session: Annotated[AsyncSession, Depends(get_session)]
+    session: SessionDep
 ):
     """
     Permet à un joueur (identifié par 'identifier') de rejoindre la file d d'attente.

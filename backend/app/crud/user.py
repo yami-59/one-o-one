@@ -23,4 +23,4 @@ async def createGuest(session : AsyncSession):
     session.refresh(player)
 
     return new_identifier
-    pass
+    
