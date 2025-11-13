@@ -1,6 +1,6 @@
 from sqlmodel.ext.asyncio.session import AsyncSession
-from models.user import User
-from utils.auth import generate_guest_identifier
+from app.models.user import User
+from app.utils.auth import generate_guest_identifier
 from sqlmodel import select
 
 

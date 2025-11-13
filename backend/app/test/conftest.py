@@ -1,17 +1,19 @@
 # /backend/tests/conftest.py
 import pytest
 from httpx import AsyncClient
-from sqlmodel import SQLModel, create_engine
+from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import AsyncGenerator
 from app.main import app 
-from app.core.db import get_session, create_db_and_tables as create_db_prod
+from app.core.db import get_session
+from sqlalchemy.ext.asyncio import create_async_engine
+
 
 # --- 1. MOTEUR ET SESSION DE TEST ---
 
 # Utiliser SQLite en mémoire pour les tests. Le 'sqlite+aiosqlite:///' crée une DB en mémoire.
 sqlite_url = "sqlite+aiosqlite://"
-engine_test = create_engine(sqlite_url, echo=False, future=True)
+engine_test = create_async_engine(sqlite_url, echo=False, future=True)
 
 async def get_session_test() -> AsyncGenerator[AsyncSession, None]:
     """

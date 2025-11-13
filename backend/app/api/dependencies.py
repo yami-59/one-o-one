@@ -3,7 +3,7 @@
 from fastapi import Header,Depends
 from typing import Annotated
 from sqlmodel.ext.asyncio.session import AsyncSession
-from core.db import get_session
+from app.core.db import get_session
 
 async def get_player_identifier(
     # Tente de lire l'identifiant unique envoyé par le frontend (stocké en localStorage)

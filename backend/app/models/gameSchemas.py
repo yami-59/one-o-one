@@ -1,10 +1,7 @@
+from typing import Dict, Any
+from sqlmodel import SQLModel 
 
-
-from pydantic import BaseModel
-from typing import Dict, Any, Literal
-from utils.enums import GameTypes
-
-class GameStateBase(BaseModel):
+class GameStateBase(SQLModel):
     """
     Classe parent agnostique au tour. Définit l'état commun à tous les jeux.
     """

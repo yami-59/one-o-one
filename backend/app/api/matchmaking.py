@@ -1,15 +1,10 @@
 # /backend/app/api/matchmaking.py (Nouveau fichier)
 
-import uuid
-from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException, status
+
+from fastapi import APIRouter
 from .dependencies import PlayerIdentifierDep,SessionDep
-from app.core.db import get_session # Dépendance Session DB
-from app.models.user import User, UserCreate
-from app.models.gameSession import GameSession, GameSessionCreate
-from app.models.gameSchemas import BoardState # Pour initialiser l'état du jeu
-from crud.user import createGuest
-from utils.enums import Status
+from app.crud.user import createGuest
+from app.utils.enums import Status
 
 
 router = APIRouter()

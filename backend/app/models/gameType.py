@@ -1,6 +1,4 @@
 from sqlmodel import Field, SQLModel
-from gameSchemas import BoardState
-from datetime import datetime
 
 
 # --- NOUVEAU MODÈLE pour valider les types de jeu ---

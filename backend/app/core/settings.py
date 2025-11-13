@@ -6,10 +6,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class Settings(BaseSettings):
     # 1. Indique à Pydantic de chercher un fichier .env à la racine
     # Ceci est crucial pour le développement local (hors Docker Compose)
-    model_config = SettingsConfigDict(env_file="../../.env", extra="ignore")
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
     # --- Configuration FastAPI/Générale ---
-    SECRET_KEY: SecretStr = Field(min_length=32)
+    SECRET_KEY: SecretStr | None = Field(default=None,min_length=32)
     DEBUG: bool = False
     
     # --- Configuration Base de Données (PostgreSQL) ---

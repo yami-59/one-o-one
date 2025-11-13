@@ -1,12 +1,9 @@
 # /backend/app/api/websocket.py (Nouveau fichier)
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
-from sqlmodel import Session, select
+from fastapi import APIRouter, WebSocket, Depends
+from sqlmodel import Session
 from typing import Annotated, Dict, List
-
 from app.core.db import get_session
-from app.models.gameSession import GameSession
-from app.models.gameSchemas import BoardState # Pour le typage de l'état
 
 router = APIRouter()
 
