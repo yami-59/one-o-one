@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from app.core.settings import settings
 from app.core.db import create_db_and_tables # Crée les tables
 from app.api.matchmaking import router as matchmaking_router # 🚀 Routeur Matchmaking
+from app.api.websocket import router as websocket_router # 🚀 Routeur Matchmaking
 
 # --- 1. Lifespan pour la gestion des événements de démarrage/arrêt ---
 @asynccontextmanager
@@ -26,6 +27,8 @@ app = FastAPI(
 # --- 3. Inclusion des Routeurs ---
 # Route principale pour le matchmaking (création de partie)
 app.include_router(matchmaking_router, prefix="/api/v1", tags=["Matchmaking"])
+# Route principale pour le websocket (connexion à une partie)
+app.include_router(websocket_router, prefix="/api/v1", tags=["Websocket"])
 
 
 @app.get("/")
