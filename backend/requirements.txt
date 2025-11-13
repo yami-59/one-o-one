@@ -21,3 +21,11 @@ fastapi-mail
 
 #Cache 
 redis
+
+#environement de test 
+pytest 
+httpx 
+pytest-asyncio
+
+# Pilote asynchrone pour utiliser SQLite avec SQLModel/SQLAlchemy
+aiosqlite
