@@ -5,7 +5,8 @@ from pydantic import EmailStr
 class User(SQLModel, table=True): 
     id: int|None = Field(default=None, primary_key=True)
     identifier: str = Field(index=True, unique=True)
-    # Correction : Le champ email peut être NULL, mais s'il est fourni, il doit être unique.
+    #  Le champ email peut être NULL, mais s'il est fourni, il doit être unique.
     mail: EmailStr|None = Field(default=None, unique=True)
-    points: int = Field(default=0)
+    victories: int = Field(default=0)
+    defeats : int = Field(default=0)
     created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)

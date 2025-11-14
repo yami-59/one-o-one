@@ -3,17 +3,24 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from app.core.settings import settings
-from app.core.db import create_db_and_tables # Crée les tables
+from app.core.db import check_db_connection
 from app.api.matchmaking import router as matchmaking_router # 🚀 Routeur Matchmaking
 from app.api.websocket import router as websocket_router # 🚀 Routeur Matchmaking
+from app.core.redis import startup_redis, shutdown_redis
 
 # --- 1. Lifespan pour la gestion des événements de démarrage/arrêt ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Crée les tables de la DB au démarrage du serveur."""
     print("Démarrage de l'API One'o One...")
-    await create_db_and_tables() 
-    yield
+    # Événement de Démarrage :
+    await check_db_connection()
+    await startup_redis()        # 🎯 Connexion Redis
+    
+    yield # L'application commence à traiter les requêtes
+    
+    # Événement d'Arrêt :
+    await shutdown_redis()
     print("Arrêt de l'API.")
 
 # --- 2. Initialisation de FastAPI ---

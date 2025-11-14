@@ -14,7 +14,8 @@ python-jose[cryptography]
 python-dotenv
 
 # Base de données Principale
-asyncpg
+asyncpg # pilote asynchrone
+psycopg2 # pilote synchrone
 
 # envoie des mails
 fastapi-mail
@@ -29,3 +30,6 @@ pytest-asyncio
 
 # Pilote asynchrone pour utiliser SQLite avec SQLModel/SQLAlchemy
 aiosqlite
+
+# outils de migration de la base de données
+alembic

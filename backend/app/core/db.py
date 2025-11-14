@@ -13,6 +13,7 @@ from app.models.gameSession import GameSession
 from app.models.gameType import GameType
 from app.models.wordLists import WordList
 from app.models.gameSchemas import GameStateBase
+from sqlalchemy.exc import OperationalError
 
 # --- 1. Création du Moteur Asynchrone ---
 # Utilise l'URL définie dans settings.py (qui sera lue depuis le .env ou Docker Compose)
@@ -25,13 +26,23 @@ engine = create_async_engine(
     max_overflow=0 # Pas de connexions au-delà du pool_size
 )
 
-# --- 2. Fonction pour la Création des Tables ---
-async def create_db_and_tables():
-    """Crée les tables dans la base de données si elles n'existent pas."""
-    async with engine.begin() as conn:
-        # run_sync exécute les opérations synchrones de l'ORM (comme create_all)
-        # dans un contexte asynchrone sécurisé.
-        await conn.run_sync(SQLModel.metadata.create_all)
+async def check_db_connection():
+    """
+    Tente de se connecter à la base de données pour vérifier sa disponibilité.
+    
+    """
+    try:
+        # Tenter d'ouvrir une session et de la fermer immédiatement
+        async with AsyncSession(engine) as session:
+            # Exécuter une requête minimale (comme une requête 'SELECT 1')
+            await session.connection() 
+        print("✅ Vérification initiale de la DB réussie.")
+        return True
+    except OperationalError as e:
+        print(f"❌ ERREUR : La base de données est inaccessible ou les identifiants sont incorrects. {e}")
+        return False
+
+
 
 
 # --- 3. Dépendance FastAPI pour la Session ---
