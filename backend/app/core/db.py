@@ -36,7 +36,7 @@ async def check_db_connection():
         async with AsyncSession(engine) as session:
             # Exécuter une requête minimale (comme une requête 'SELECT 1')
             await session.connection() 
-        print("✅ Vérification initiale de la DB réussie.")
+        print("✅ Connexion à postgresql établie")
         return True
     except OperationalError as e:
         print(f"❌ ERREUR : La base de données est inaccessible ou les identifiants sont incorrects. {e}")
