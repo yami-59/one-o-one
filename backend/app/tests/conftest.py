@@ -1,13 +1,13 @@
 # /backend/tests/conftest.py
 import pytest
-from httpx import AsyncClient
+from fastapi.testclient import TestClient
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
-from typing import AsyncGenerator
-from backend.app.api_main import app 
+from typing import AsyncGenerator,Generator
+from app.api_main import app 
 from app.core.db import get_session
 from sqlalchemy.ext.asyncio import create_async_engine
-import app.models
+from app.models import *
 
 # --- 1. MOTEUR ET SESSION DE TEST ---
 
@@ -22,33 +22,39 @@ async def get_session_test() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSession(engine_test) as session:
         yield session
 
+# Définir une fixture de session simple
+@pytest.fixture(scope="session")
+def anyio_backend():
+    """
+    Nécessaire pour le support asynchrone moderne de Pytest.
+    """
+    return 'asyncio'
 
-# --- 2. FIXTURE DE SETUP DE LA DB ---
 
+# --- 2. FIXTURE DE SETUP DE LA DB (CORRIGÉE) ---
+
+# Ajout de 'anyio_backend' ou d'une autre dépendance asynchrone
 @pytest.fixture(scope="session", autouse=True)
-async def setup_db():
+async def setup_db(anyio_backend): 
     """
     Configure la base de données de test une seule fois au début de la session.
     """
-    # ⚠️ 1. Créer toutes les tables basées sur les modèles SQLModel
+    # ... (code de création des tables et surcharge de dépendance inchangé)
+    
     async with engine_test.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
     
-    # ⚠️ 2. Surcharger la dépendance get_session de FastAPI pour utiliser la DB de test
     app.dependency_overrides[get_session] = get_session_test
     
-    # Le 'yield' permet au test de s'exécuter
     yield
-    
-    
 
 
 # --- 3. FIXTURE DU CLIENT DE TEST (Réutilisé de notre discussion précédente) ---
 
 @pytest.fixture(scope="session")
-async def client() -> AsyncGenerator[AsyncClient, None]:
+def client() -> Generator[TestClient, None,None]:
     """
     Fournit un client HTTP asynchrone pour tester l'API FastAPI.
     """
-    async with AsyncClient(app=app, base_url="http://test") as client:
+    with TestClient(app=app) as client:
         yield client

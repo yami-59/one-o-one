@@ -29,7 +29,7 @@ async def shutdown_redis():
     """Ferme la connexion Redis à l'arrêt de l'application."""
     global redis_client
     if redis_client:
-        await redis_client.close()
+        await redis_client.aclose()
         print("🔌 Connexion Redis fermée.")
 
 # --- 2. Dépendance FastAPI ---

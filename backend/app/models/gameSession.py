@@ -5,9 +5,7 @@ from app.utils.enums import Status
 # Source - https://stackoverflow.com/a
 # Posted by Bob, modified by community. See post 'Timeline' for change history
 # Retrieved 2025-11-13, License - CC BY-SA 4.0
-
-from sqlalchemy.dialects.postgresql import JSONB
-
+from sqlalchemy.types import JSON
 
 
 class GameSession(SQLModel, table=True):
@@ -16,7 +14,7 @@ class GameSession(SQLModel, table=True):
     
     game_type: str = Field(foreign_key='gametype.type') 
     
-    gameData: GameStateBase = Field(sa_type=JSONB)
+    gameData: GameStateBase = Field(sa_type=JSON)
     
     player1_identifier: str = Field(foreign_key='user.identifier')
     player2_identifier: str = Field(foreign_key='user.identifier')
