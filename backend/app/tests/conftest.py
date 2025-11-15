@@ -4,10 +4,10 @@ from httpx import AsyncClient
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import AsyncGenerator
-from app.main import app 
+from backend.app.api_main import app 
 from app.core.db import get_session
 from sqlalchemy.ext.asyncio import create_async_engine
-
+import app.models
 
 # --- 1. MOTEUR ET SESSION DE TEST ---
 

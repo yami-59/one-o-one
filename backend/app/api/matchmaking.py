@@ -2,8 +2,7 @@
 
 
 from fastapi import APIRouter
-from .dependencies import PlayerIdentifierDep,SessionDep
-from app.crud.user import createGuest
+from .dependencies import SessionDep
 from app.utils.enums import Status
 
 
@@ -18,7 +17,7 @@ WAITING_PLAYER_ID: str | None = None
 
 @router.post("/join-queue")
 async def join_queue(
-    current_identifier: PlayerIdentifierDep,
+    identifier: str,
     session: SessionDep
 ):
     """
@@ -27,13 +26,9 @@ async def join_queue(
     """
     global WAITING_PLAYER_ID
 
-    # --- 1. Déterminer l'Identifiant (Création si Nouvel Invité) ---
-    player_id = current_identifier
 
-    if player_id is None : 
-        player_id=createGuest(session)
 
     if WAITING_PLAYER_ID is None:
-        WAITING_PLAYER_ID = player_id
-        return {"status": Status.waiting, "message": "En attente d'un adversaire...", "identifier": player_id}
+        WAITING_PLAYER_ID = identifier
+        return {"status": Status.waiting, "message": "En attente d'un adversaire...", "identifier": identifier}
 

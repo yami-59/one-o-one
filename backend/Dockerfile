@@ -19,5 +19,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # (Les dossiers app/, main.py, etc.)
 COPY . .
 
-# 6. Commande par défaut lors du démarrage du conteneur
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# 6. Commande par défaut lors du démarrage du conteneur , démarrage de l'api principale
+CMD ["uvicorn", "app.api_main:app", "--host", "0.0.0.0", "--port", "8000"]
+#Autre Commande par défaut possible ,démarrage du game_engine 
+#CMD ["uvicorn", "app.game_main:app", "--host", "0.0.0.0", "--port", "8000"]

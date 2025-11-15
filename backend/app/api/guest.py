@@ -1,7 +1,9 @@
+from fastapi import APIRouter
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.user import User
 from app.utils.auth import generate_guest_identifier
 from sqlmodel import select
+from .dependencies import SessionDep
 
 
 
@@ -24,3 +26,10 @@ async def createGuest(session : AsyncSession):
 
     return new_identifier
     
+
+router = APIRouter()
+
+@router.post("/new_guest")
+async def new_guest(session:SessionDep):
+    createGuest(session)
+    pass

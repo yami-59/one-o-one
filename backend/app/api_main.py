@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from app.core.settings import settings
 from app.core.db import check_db_connection
 from app.api.matchmaking import router as matchmaking_router # 🚀 Routeur Matchmaking
+from app.api.guest import router as guest_router
 from app.api.websocket import router as websocket_router # 🚀 Routeur Matchmaking
 from app.core.redis import startup_redis, shutdown_redis
 
@@ -34,8 +35,7 @@ app = FastAPI(
 # --- 3. Inclusion des Routeurs ---
 # Route principale pour le matchmaking (création de partie)
 app.include_router(matchmaking_router, prefix="/api/v1", tags=["Matchmaking"])
-# Route principale pour le websocket (connexion à une partie)
-app.include_router(websocket_router, prefix="/api/v1", tags=["Websocket"])
+app.include_router(guest_router,prefix="/api/v1",tags=["create new guest Account"])
 
 
 @app.get("/")

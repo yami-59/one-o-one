@@ -1,11 +1,7 @@
 from logging.config import fileConfig
 from sqlmodel import SQLModel
 from alembic import context
-from app.models.user import * # 🎯 Importez TOUS vos modèles ici (User, GameSession, WordList, etc.)
-from app.models.gameSchemas import *
-from app.models.gameSession import * 
-from app.models.gameType import * 
-from app.models.wordLists import * 
+import app.models
 from dotenv import load_dotenv # 🎯 Importez la fonction de chargement
 import os
 from sqlalchemy import create_engine
