@@ -3,7 +3,6 @@
 import redis.asyncio as aioredis
 from typing import AsyncGenerator
 from app.core.settings import settings
-from fastapi import FastAPI
 
 # Variable globale pour stocker la connexion Redis (sera initialisée au démarrage)
 redis_client: aioredis.Redis | None = None

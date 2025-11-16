@@ -16,3 +16,5 @@ class GameStateBase(SQLModel):
     # Données Spécifiques au Joueur (ex: prêt à jouer, vies restantes, etc.)
     player_data: Dict[str, Dict[str, Any]] = {} # {identifier_joueur: {statut_specifique}}
 
+class PlayerIdentifier(SQLModel):
+    identifier: str

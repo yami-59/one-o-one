@@ -8,11 +8,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 # ⚠️ Il est ESSENTIEL d'importer les modèles ici pour que SQLModel
 # puisse les détecter et créer les tables dans create_db_and_tables().
-from app.models.user import User
-from app.models.gameSession import GameSession
-from app.models.gameType import GameType
-from app.models.wordLists import WordList
-from app.models.gameSchemas import GameStateBase
+from app.models.tables import *
 from sqlalchemy.exc import OperationalError
 
 # --- 1. Création du Moteur Asynchrone ---

@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, WebSocket, Depends
 from sqlmodel import Session
-from typing import Annotated, Dict, List
+from typing import Annotated, Dict,List
 from app.core.db import get_session
 
 router = APIRouter()

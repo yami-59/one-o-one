@@ -1,35 +1,38 @@
-from fastapi import APIRouter
+from fastapi import APIRouter,status
 from sqlmodel.ext.asyncio.session import AsyncSession
-from app.models.user import User
-from app.utils.auth import generate_guest_identifier
-from sqlmodel import select
+from app.models.tables import User
+from sqlmodel import select,desc
 from .dependencies import SessionDep
 
 
 
 async def createGuest(session : AsyncSession):
-    new_identifier=""
 
-    while True:
-        new_identifier = generate_guest_identifier()
-        # 1. Vérification en DB (méthode safe pour les invités)
-        player = session.exec(select(User).where(User.identifier == new_identifier)).first()
-        if not player : 
-            break
-        # La variable 'new_identifier' est garantie d'exister ici et d'être unique en DB.
-        print(f"Nouvel identifiant unique trouvé : {new_identifier}")
+    query = (
+        select(User.id) # 🎯 1. Ne sélectionner que l'ID pour optimiser
+        .order_by(desc(User.id)) # 🎯 2. Trier par ID (le plus grand est le plus récent)
+        .limit(1)                # 🎯 3. Limiter à un seul résultat
+    )
+
+    result=await session.exec(query)
+
+    result=result.one_or_none()
+
+    if(result==None):
+        result=1
+
     # Créer le joueur en mode invité avec l'identifiant unique
-    player = User(new_identifier)
+    player = User(identifier=f"guest_{result}")
     session.add(player)
-    session.commit()
-    session.refresh(player)
+    await session.commit()
+    await session.refresh(player)
 
-    return new_identifier
+    return player
     
 
 router = APIRouter()
 
-@router.post("/new_guest")
+@router.post("/new_guest",status_code=status.HTTP_201_CREATED,response_model=User)
 async def new_guest(session:SessionDep):
-    createGuest(session)
-    pass
+    player=await createGuest(session)
+    return player

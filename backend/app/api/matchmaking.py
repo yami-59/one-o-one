@@ -1,9 +1,10 @@
 # /backend/app/api/matchmaking.py (Nouveau fichier)
 
 
-from fastapi import APIRouter
+from fastapi import APIRouter,status
 from .dependencies import SessionDep
-from app.utils.enums import Status
+from app.utils.utils import Status
+from app.models.schemas import PlayerIdentifier
 
 
 router = APIRouter()
@@ -15,9 +16,9 @@ WAITING_PLAYER_ID: str | None = None
 
 # /backend/app/api/matchmaking.py 
 
-@router.post("/join-queue")
+@router.post("/join-queue",status_code=status.HTTP_202_ACCEPTED)
 async def join_queue(
-    identifier: str,
+    identifier: PlayerIdentifier,
     session: SessionDep
 ):
     """
@@ -30,5 +31,5 @@ async def join_queue(
 
     if WAITING_PLAYER_ID is None:
         WAITING_PLAYER_ID = identifier
-        return {"status": Status.waiting, "message": "En attente d'un adversaire...", "identifier": identifier}
+        return {"PlayerStatus": Status.waiting, "message": "En attente d'un adversaire...", "identifier": identifier}
 

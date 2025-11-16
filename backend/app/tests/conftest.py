@@ -1,5 +1,6 @@
 # /backend/tests/conftest.py
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -15,6 +16,7 @@ from app.models import *
 sqlite_url = "sqlite+aiosqlite://"
 engine_test = create_async_engine(sqlite_url, echo=False, future=True)
 
+
 async def get_session_test() -> AsyncGenerator[AsyncSession, None]:
     """
     Dépendance de session asynchrone pour l'environnement de test.
@@ -22,20 +24,27 @@ async def get_session_test() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSession(engine_test) as session:
         yield session
 
-# Définir une fixture de session simple
-@pytest.fixture(scope="session")
-def anyio_backend():
+@pytest_asyncio.fixture(scope="function") # Scope function pour l'isolation des tests DB
+async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """
-    Nécessaire pour le support asynchrone moderne de Pytest.
+    Exécute le générateur de session de test pour obtenir l'objet AsyncSession actif.
     """
-    return 'asyncio'
+    # 🎯 Exécution et nettoyage du générateur via async for
+    async for session in get_session_test():
+        yield session
+
+        # 🎯 ROLLBACK : C'est ici que le nettoyage se fait !
+        # La transaction est annulée après le test pour annuler toutes les écritures.
+        await session.rollback()
+
+
+
 
 
 # --- 2. FIXTURE DE SETUP DE LA DB (CORRIGÉE) ---
 
-# Ajout de 'anyio_backend' ou d'une autre dépendance asynchrone
-@pytest.fixture(scope="session", autouse=True)
-async def setup_db(anyio_backend): 
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def setup_db(): 
     """
     Configure la base de données de test une seule fois au début de la session.
     """
@@ -49,7 +58,7 @@ async def setup_db(anyio_backend):
     yield
 
 
-# --- 3. FIXTURE DU CLIENT DE TEST (Réutilisé de notre discussion précédente) ---
+# --- 3. FIXTURE DU CLIENT DE TEST ---
 
 @pytest.fixture(scope="session")
 def client() -> Generator[TestClient, None,None]:

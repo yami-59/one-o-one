@@ -33,3 +33,6 @@ aiosqlite
 
 # outils de migration de la base de données
 alembic
+
+# Pour la gestion des sessions 
+jwt
