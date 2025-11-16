@@ -5,7 +5,7 @@ from fastapi import APIRouter,status
 from .dependencies import SessionDep
 from app.utils.utils import Status
 from app.models.schemas import PlayerIdentifier
-
+import uuid
 
 router = APIRouter()
 
@@ -23,7 +23,6 @@ async def join_queue(
 ):
     """
     Permet à un joueur (identifié par 'identifier') de rejoindre la file d d'attente.
-    Crée le joueur en DB s'il n'existe pas (mode Invité).
     """
     global WAITING_PLAYER_ID
 
@@ -33,3 +32,19 @@ async def join_queue(
         WAITING_PLAYER_ID = identifier
         return {"PlayerStatus": Status.waiting, "message": "En attente d'un adversaire...", "identifier": identifier}
 
+    if identifier != WAITING_PLAYER_ID:
+    # Match trouvé !
+    # ...
+    # SCÉNARIO 2 : Match trouvé
+        # Récupération des deux identifiants de joueurs :
+        player_a_id = WAITING_PLAYER_ID
+        player_b_id = identifier
+
+
+        # 🎯 Création de l'ID unique de la partie
+        game_id = str(uuid.uuid4())
+
+        pass
+    else:
+        # Erreur : Le joueur est déjà en file d'attente
+        return {"status": "error", "message": "Vous êtes déjà en attente de match."}

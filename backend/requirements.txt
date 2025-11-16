@@ -36,3 +36,6 @@ alembic
 
 # Pour la gestion des sessions 
 jwt
+
+# autres 
+codesum
