@@ -1,7 +1,8 @@
 from logging.config import fileConfig
 from sqlmodel import SQLModel
 from alembic import context
-import app.models
+from app.models.tables import *
+from app.models.schemas import *
 from dotenv import load_dotenv # 🎯 Importez la fonction de chargement
 import os
 from sqlalchemy import create_engine

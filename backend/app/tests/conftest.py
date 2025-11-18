@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import AsyncGenerator,Generator
-from app.api_main import app 
+from backend.app.main import app 
 from app.core.db import get_session
 from sqlalchemy.ext.asyncio import create_async_engine
 from app.models import *
@@ -43,6 +43,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
 # --- 2. FIXTURE DE SETUP DE LA DB (CORRIGÉE) ---
 
+# Ajout de 'anyio_backend' ou d'une autre dépendance asynchrone
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def setup_db(): 
     """

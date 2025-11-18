@@ -24,11 +24,16 @@ def create_access_token(data: dict, expires_delta: timedelta):
 
 class Status(str, Enum):
     waiting = "waiting"
-    ready = "ready"
+    alreadyWaiting="already waiting"
+    ready="ready"
+    matched="matched"
     active = "active"
     paused = "paused"
     timeout = "timeout"
     finished = "finished"
     abandoned = "abandoned"
 
-
+class Games(str,Enum):
+    word_search="WORD_SEARCH"
+    
+    pass

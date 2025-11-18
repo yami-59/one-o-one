@@ -8,12 +8,15 @@ from app.api.matchmaking import router as matchmaking_router # 🚀 Routeur Matc
 from app.api.guest import router as guest_router
 from app.api.websocket import router as websocket_router # 🚀 Routeur Matchmaking
 from app.core.redis import startup_redis, shutdown_redis
+from fastapi.middleware.cors import CORSMiddleware
 
-# --- 1. Lifespan pour la gestion des événements de démarrage/arrêt ---
+# --- Lifespan pour la gestion des événements de démarrage/arrêt ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Crée les tables de la DB au démarrage du serveur."""
     print("Démarrage de l'API One'o One...")
+    print(settings.origins)
+
     # Événement de Démarrage :
     await check_db_connection()
     await startup_redis()        # 🎯 Connexion Redis
@@ -24,7 +27,7 @@ async def lifespan(app: FastAPI):
     await shutdown_redis()
     print("Arrêt de l'API.")
 
-# --- 2. Initialisation de FastAPI ---
+# --- Initialisation de FastAPI ---
 app = FastAPI(
     title="One'o One Game API (MVP)",
     version="0.1.0",
@@ -32,10 +35,23 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# --- 3. Inclusion des Routeurs ---
+
+# --- Configuration CORS ---
+origins = settings.origins
+
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],         # 🎯 Les origines autorisées (votre frontend)
+    allow_credentials=True,        # Autoriser les cookies et headers d'autorisation (JWT)
+    allow_methods=["*"],           # Autoriser toutes les méthodes (GET, POST, OPTIONS, etc.)
+    allow_headers=["*"],           # Autoriser tous les en-têtes (y compris X-Player-Identifier)
+)
+
 # Route principale pour le matchmaking (création de partie)
 app.include_router(matchmaking_router, prefix="/api/v1", tags=["Matchmaking"])
 app.include_router(guest_router,prefix="/api/v1",tags=["create new guest Account"])
+app.include_router(websocket_router,prefix="/api/v1",tags=["websocket"])
 
 
 @app.get("/")

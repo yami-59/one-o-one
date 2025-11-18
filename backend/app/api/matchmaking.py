@@ -1,11 +1,12 @@
-# /backend/app/api/matchmaking.py (Nouveau fichier)
+# /backend/app/api/matchmaking.py 
 
 
-from fastapi import APIRouter,status
+from fastapi import APIRouter,status,Response
 from .dependencies import SessionDep
-from app.utils.utils import Status
-from app.models.schemas import PlayerIdentifier
+from app.utils.utils import Status,Games
+from app.models.schemas import *
 import uuid
+from app.models.tables import GameSession
 
 router = APIRouter()
 
@@ -14,11 +15,10 @@ router = APIRouter()
 WAITING_PLAYER_ID: str | None = None
 
 
-# /backend/app/api/matchmaking.py 
 
-@router.post("/join-queue",status_code=status.HTTP_202_ACCEPTED)
+@router.post("/join-queue",status_code=status.HTTP_200_OK)
 async def join_queue(
-    identifier: PlayerIdentifier,
+    player_id: PlayerIdentifier,
     session: SessionDep
 ):
     """
@@ -27,24 +27,46 @@ async def join_queue(
     global WAITING_PLAYER_ID
 
 
-
     if WAITING_PLAYER_ID is None:
-        WAITING_PLAYER_ID = identifier
-        return {"PlayerStatus": Status.waiting, "message": "En attente d'un adversaire...", "identifier": identifier}
+        WAITING_PLAYER_ID = player_id.identifier
+        return {"status": Status.waiting, "message": "En attente d'un adversaire..."}
 
-    if identifier != WAITING_PLAYER_ID:
-    # Match trouvé !
-    # ...
-    # SCÉNARIO 2 : Match trouvé
+    elif player_id.identifier != WAITING_PLAYER_ID:
+    # Match trouvé 
         # Récupération des deux identifiants de joueurs :
-        player_a_id = WAITING_PLAYER_ID
-        player_b_id = identifier
+        first_in_queue = WAITING_PLAYER_ID
+        second_in_queue= player_id.identifier
 
 
-        # 🎯 Création de l'ID unique de la partie
-        game_id = str(uuid.uuid4())
+        # Création de l'ID unique de la partie
+        g_id = str(uuid.uuid4())
 
-        pass
+        WAITING_PLAYER_ID=None
+
+        new_game = GameSession (
+            game_id=g_id, 
+            player1_identifier=first_in_queue, 
+            player2_identifier=second_in_queue,
+            game_type=Games.word_search,
+            game_data=GameStateBase().model_dump_json(indent=2)
+        )
+        
+        session.add(new_game)
+        await session.commit()
+        await session.refresh(new_game)
+        
+        # 3. RÉINITIALISATION DE LA FILE D'ATTENTE
+        WAITING_PLAYER_ID = None 
+        
+
+        # 4. Envoi de la réponse finale au Joueur B
+        return {
+            "status": Status.matched,
+            # "game_id": new_game.game_id, # 🎯 La clé pour la connexion WebSocket
+            "opponent_identifier": first_in_queue,
+            "message": "Match trouvé ! Début de la session de jeu."
+        }
+    
     else:
-        # Erreur : Le joueur est déjà en file d'attente
-        return {"status": "error", "message": "Vous êtes déjà en attente de match."}
+        # 200 OK est plus approprié que 202 ACCEPTED pour signaler que rien n'a changé
+        return {"status": Status.alreadyWaiting, "message": "Vous êtes déjà en file d'attente."}

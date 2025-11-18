@@ -2,6 +2,8 @@
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing import List
+from functools import cached_property
 
 class Settings(BaseSettings):
     # 1. Indique à Pydantic de chercher un fichier .env à la racine
@@ -11,6 +13,16 @@ class Settings(BaseSettings):
     # --- Configuration FastAPI/Générale ---
     SECRET_KEY: SecretStr | None = Field(default=None,min_length=32)
     DEBUG: bool = False
+    # Lit la chaîne brute du .env
+    CORS_ORIGINS: str = Field(alias="ORIGINS") 
+
+    @cached_property
+    def origins(self) -> List[str]:
+        """Convertit la chaîne d'origines en une liste Python."""
+        # On nettoie les espaces blancs et on split la chaîne par la virgule.
+        return [
+            origin.strip() for origin in self.CORS_ORIGINS.split(',') 
+        ]
     
     # --- Configuration Base de Données (PostgreSQL) ---
     # Pydantic validera que c'est une URL valide
