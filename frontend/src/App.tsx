@@ -2,7 +2,6 @@
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import HomePage from './pages/HomePage.tsx'; 
-import MatchmakingTester from './tests/matchmakingTester.tsx';
 
 // ... autres imports ...
 
