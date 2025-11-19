@@ -2,6 +2,9 @@
 # (dotfiles, .DS_Store, .vscode, .idea, etc.)
 .*
 
+#Ignore tous les pdf
+*.pdf
+
 # EXCEPTION : N'ignore PAS les fichiers essentiels de Git
 !/.gitignore
 !/.gitattributes
