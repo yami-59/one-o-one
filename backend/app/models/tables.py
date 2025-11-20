@@ -25,7 +25,6 @@ class GameSession(SQLModel, table=True):
             # Utiliser la bonne factory UTC
             default_factory=lambda: datetime.now(timezone.utc),
             nullable=False,
-            
             sa_type=DateTime(timezone=True) 
         )
 

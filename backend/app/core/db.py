@@ -1,15 +1,15 @@
 # /backend/app/core/db.py
 
 from typing import AsyncGenerator
-from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.core.settings import settings
 from sqlalchemy.ext.asyncio import create_async_engine
-
-# ⚠️ Il est ESSENTIEL d'importer les modèles ici pour que SQLModel
-# puisse les détecter et créer les tables dans create_db_and_tables().
-from app.models.tables import *
+from typing import Annotated
+from fastapi import Depends
 from sqlalchemy.exc import OperationalError
+from asyncpg.exceptions import ConnectionDoesNotExistError
+import asyncio
+
 
 # --- 1. Création du Moteur Asynchrone ---
 # Utilise l'URL définie dans settings.py (qui sera lue depuis le .env ou Docker Compose)
@@ -22,23 +22,23 @@ engine = create_async_engine(
     max_overflow=0 # Pas de connexions au-delà du pool_size
 )
 
-async def check_db_connection():
-    """
-    Tente de se connecter à la base de données pour vérifier sa disponibilité.
-    
-    """
-    try:
-        # Tenter d'ouvrir une session et de la fermer immédiatement
-        async with AsyncSession(engine) as session:
-            # Exécuter une requête minimale (comme une requête 'SELECT 1')
-            await session.connection() 
-        print("✅ Connexion à postgresql établie")
-        return True
-    except OperationalError as e:
-        print(f"❌ ERREUR : La base de données est inaccessible ou les identifiants sont incorrects. {e}")
-        return False
-
-
+async def check_db_connection(max_retries: int = 5, delay: int = 2):
+    """Tente de se connecter à la DB plusieurs fois avant d'échouer."""
+    for attempt in range(max_retries):
+        try:
+            async with AsyncSession(engine) as session:
+                await session.connection()
+            print("✅ Connexion DB réussie après tentative.")
+            return
+        
+        except (OperationalError, ConnectionDoesNotExistError) as e:
+            if attempt < max_retries - 1:
+                print(f"Tentative {attempt + 1}/{max_retries} échouée. Nouvelle tentative dans {delay}s...")
+                await asyncio.sleep(delay)
+            else:
+                # Si c'est la dernière tentative, on lève l'exception pour que FastAPI plante
+                print("❌ Toutes les tentatives de connexion DB ont échoué.")
+                raise e
 
 
 # --- 3. Dépendance FastAPI pour la Session ---
@@ -49,3 +49,5 @@ async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """
     async with AsyncSession(engine) as session:
         yield session
+
+SessionDep = Annotated[AsyncGenerator,Depends(get_session)]

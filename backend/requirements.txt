@@ -39,3 +39,4 @@ jwt
 
 # autres 
 codesum
+python-jose

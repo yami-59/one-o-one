@@ -1,27 +1,100 @@
-from fastapi import APIRouter,status
-from sqlmodel.ext.asyncio.session import AsyncSession
+from sqlmodel import  SQLModel,select
+from app.core.db import SessionDep
+from fastapi import APIRouter,status,HTTPException
 from app.models.tables import User
-from sqlmodel import select,desc
-from .dependencies import SessionDep
+from app.utils.auth import *
 import uuid
-
-
-
-async def createGuest(session : AsyncSession):
-
-   
-    # Créer le joueur en mode invité avec l'identifiant unique
-    player = User(identifier=f"guest_{str(uuid.uuid4())}")
-    session.add(player)
-    await session.commit()
-    await session.refresh(player)
-
-    return player
-    
 
 router = APIRouter()
 
-@router.post("/new_guest",status_code=status.HTTP_201_CREATED,response_model=User)
-async def new_guest(session:SessionDep):
-    player=await createGuest(session)
-    return player
+
+# Schéma de réponse pour la connexion
+class TokenResponse(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
+    player_identifier: str
+
+@router.post("/api/v1/guest/login", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+def login_guest(session: SessionDep):
+    """
+    Crée un compte utilisateur invité et génère un JWT pour l'authentification.
+    """
+    # 1. Génération de l'identifiant unique (UUID ou autre méthode sûre)
+  
+    new_identifier = "guest-"+str(uuid.uuid4())
+
+    # 2. Création de l'utilisateur dans la DB
+    db_user = User(identifier=new_identifier)
+    
+    try:
+        session.add(db_user)
+        session.commit()
+        session.refresh(db_user)
+    except Exception as e:
+        # Gérer l'erreur si l'insertion échoue
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erreur lors de la création de l'utilisateur invité: {e}"
+        )
+
+    # 3. Création du Jeton JWT
+    access_token = create_access_token(
+        # Utiliser 'sub' (subject) pour stocker l'identifiant unique du joueur
+        data={"sub": new_identifier} 
+    )
+
+    # 4. Retourner le jeton et l'identifiant au client
+    return TokenResponse(
+        access_token=access_token,
+        player_identifier=new_identifier
+    )
+
+# --- Les Imports et Définitions (Assurez-vous qu'elles sont dans votre contexte) ---
+# router = APIRouter(tags=["Auth"])
+# UserModel, TokenResponse, create_access_token, verify_token, get_session, etc.
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/guest/login")
+# ---------------------------------------------------------------------------------
+
+@router.post("/guest/refresh", status_code=status.HTTP_200_OK, response_model=TokenResponse)
+def refresh_guest_token(
+    # Le jeton est extrait de l'en-tête Authorization
+    token_to_refresh: TokenDep,
+    session: SessionDep
+):
+    """
+    Échange un jeton existant (même s'il est expiré) contre un nouveau jeton.
+    """
+    
+    # 1. Tenter de vérifier le jeton pour récupérer l'identifiant du joueur (subject 'sub')
+    try:
+        # NOTE 1: La fonction verify_token DOIT être adaptée pour IGNORER l'expiration ici 
+
+        player_identifier = get_current_player_id(token_to_refresh,False)
+        
+    except HTTPException:
+        # Si le jeton est invalide (mauvaise signature, format incorrect), nous rejetons.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Jeton invalide (signature ou format incorrect)."
+        )
+    
+    # 2. Vérification de l'existence de l'utilisateur en DB
+    statement = select(User).where(User.identifier == player_identifier)
+    user = session.exec(statement).first()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Utilisateur associé au jeton introuvable."
+        )
+
+    # 3. Génération d'un nouveau jeton JWT
+    new_access_token = create_access_token(
+        data={"sub": player_identifier} 
+    )
+
+    # 4. Retourner le nouveau jeton
+    return TokenResponse(
+        access_token=new_access_token,
+        player_identifier=player_identifier
+    )

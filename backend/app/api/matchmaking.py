@@ -2,11 +2,16 @@
 
 
 from fastapi import APIRouter,status,Response
-from .dependencies import SessionDep
+from app.core.db import SessionDep
 from app.utils.utils import Status,Games
 from app.models.schemas import *
 import uuid
 from app.models.tables import GameSession
+from app.utils.auth import get_current_player_id,TokenDep
+
+
+
+
 
 router = APIRouter()
 
@@ -16,9 +21,9 @@ WAITING_PLAYER_ID: str | None = None
 
 
 
-@router.post("/join-queue",status_code=status.HTTP_200_OK)
+@router.post("/matchmaking/join",status_code=status.HTTP_200_OK)
 async def join_queue(
-    player_id: PlayerIdentifier,
+    token:TokenDep,
     session: SessionDep
 ):
     """
@@ -26,16 +31,16 @@ async def join_queue(
     """
     global WAITING_PLAYER_ID
 
-
+    player_id=get_current_player_id(token)
     if WAITING_PLAYER_ID is None:
-        WAITING_PLAYER_ID = player_id.identifier
+        WAITING_PLAYER_ID = player_id
         return {"status": Status.waiting, "message": "En attente d'un adversaire..."}
 
-    elif player_id.identifier != WAITING_PLAYER_ID:
+    elif player_id != WAITING_PLAYER_ID:
     # Match trouvé 
         # Récupération des deux identifiants de joueurs :
         first_in_queue = WAITING_PLAYER_ID
-        second_in_queue= player_id.identifier
+        second_in_queue= player_id
 
 
         # Création de l'ID unique de la partie
@@ -70,3 +75,12 @@ async def join_queue(
     else:
         # 200 OK est plus approprié que 202 ACCEPTED pour signaler que rien n'a changé
         return {"status": Status.alreadyWaiting, "message": "Vous êtes déjà en file d'attente."}
+
+
+
+@router.post("api/v1/matchmaking/leave",status_code=status.HTTP_200_OK)
+async def join_queue(
+    token:TokenDep,
+    session: SessionDep
+):
+    pass

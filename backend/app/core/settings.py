@@ -12,6 +12,7 @@ class Settings(BaseSettings):
 
     # --- Configuration FastAPI/Générale ---
     SECRET_KEY: SecretStr | None = Field(default=None,min_length=32)
+    ALGORITHM:str
     DEBUG: bool = False
     # Lit la chaîne brute du .env
     CORS_ORIGINS: str = Field(alias="ORIGINS") 

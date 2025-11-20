@@ -13,3 +13,14 @@ class GameStateBase(SQLModel):
 
 class PlayerIdentifier(SQLModel):
     identifier: str
+
+
+class UserStats(SQLModel):
+    victories:int
+    defeats:int
+
+# Schéma de réponse pour la connexion
+class TokenResponse(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
+    player_identifier: str

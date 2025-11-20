@@ -15,8 +15,6 @@ from fastapi.middleware.cors import CORSMiddleware
 async def lifespan(app: FastAPI):
     """Crée les tables de la DB au démarrage du serveur."""
     print("Démarrage de l'API One'o One...")
-    print(settings.origins)
-
     # Événement de Démarrage :
     await check_db_connection()
     await startup_redis()        # 🎯 Connexion Redis

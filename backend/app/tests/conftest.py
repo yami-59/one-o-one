@@ -5,10 +5,13 @@ from fastapi.testclient import TestClient
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
 from typing import AsyncGenerator,Generator
-from backend.app.main import app 
+from app.main import app 
 from app.core.db import get_session
 from sqlalchemy.ext.asyncio import create_async_engine
-from app.models import *
+from app.models.schemas import *
+from app.models.tables import *
+
+
 
 # --- 1. MOTEUR ET SESSION DE TEST ---
 
@@ -16,6 +19,10 @@ from app.models import *
 sqlite_url = "sqlite+aiosqlite://"
 engine_test = create_async_engine(sqlite_url, echo=False, future=True)
 
+
+@pytest.fixture(scope="session")
+def anyio_backend():
+    return 'asyncio'
 
 async def get_session_test() -> AsyncGenerator[AsyncSession, None]:
     """
@@ -33,7 +40,6 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
     async for session in get_session_test():
         yield session
 
-        # 🎯 ROLLBACK : C'est ici que le nettoyage se fait !
         # La transaction est annulée après le test pour annuler toutes les écritures.
         await session.rollback()
 
@@ -43,7 +49,6 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
 
 # --- 2. FIXTURE DE SETUP DE LA DB (CORRIGÉE) ---
 
-# Ajout de 'anyio_backend' ou d'une autre dépendance asynchrone
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def setup_db(): 
     """

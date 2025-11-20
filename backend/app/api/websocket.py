@@ -1,16 +1,22 @@
 # /backend/app/api/websocket.py
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status
-from sqlmodel import Session, select
-from typing import Annotated, Dict, List
-import asyncio
-from app.core.db import get_session # Pour la vérification DB
+from sqlmodel import  select
+from typing import  Dict, List
+from app.core.db import SessionDep  # Pour la vérification DB
 from app.models.tables import GameSession # Pour vérifier l'existence de la partie
+from app.utils.auth import get_current_player_id,TokenDep
+import asyncio
+
+
 
 # --- État Global des Connexions (En mémoire) ---
 # Clé: game_id (str) -> Valeur: List[WebSocket] (connexions des joueurs)
 ACTIVE_CONNECTIONS: Dict[str, List[WebSocket]] = {}
 
+
+
+# Configurez le schéma de sécurité OAuth2 (FastAPI l'utilise pour extraire le jeton de l'en-tête)
 router = APIRouter()
 
 
@@ -35,16 +41,16 @@ async def broadcast_message(game_id: str, message: dict):
 
 @router.websocket("/ws/game/{game_id}/{player_identifier}")
 async def websocket_endpoint(
-    websocket: WebSocket,
     game_id: str,
-    player_identifier: str,
-    # La session DB est ici pour vérifier l'existence de la partie, mais est rarement utilisée après l'acceptation.
-    session: Annotated[Session, Depends(get_session)] 
+    token: TokenDep,
+    session: SessionDep ,
+    websocket: WebSocket,
+
 ):
     """
     Gère la connexion WebSocket pour une partie spécifique (vérification de l'ID, enregistrement).
     """
-    
+    player_identifier=get_current_player_id(token)
     # 1. Vérification de la Session de Jeu en DB
     game = session.exec(
         select(GameSession).where(GameSession.game_id == game_id)
@@ -83,7 +89,7 @@ async def websocket_endpoint(
             if data.get("action") == "ready":
                 message = {"type": "server_info", "message": f"Server received ready from {player_identifier}"}
             else:
-                # 🎯 Pour le test, on renvoie simplement ce qu'on reçoit à tous les joueurs
+                # Pour le test, on renvoie simplement ce qu'on reçoit à tous les joueurs
                 message = {"type": "echo", "sender": player_identifier, "data": data}
             
             # 5. Diffusion de la réponse à tous les joueurs de la partie
