@@ -11,7 +11,6 @@ class GameSession(SQLModel, table=True):
     id: int|None = Field(default=None, primary_key=True)
     game_id: str = Field(index=True, unique=True)
     
-    # game_type: str = Field(foreign_key='gametype.type') 
     game_name: str | None = Field(default=None) 
     
     game_data: GameStateBase = Field(sa_type=JSON)
