@@ -47,7 +47,7 @@ app.add_middleware(
 )
 
 # Route principale pour le matchmaking (création de partie)
-app.include_router(matchmaking_router, prefix="/api/v1", tags=["Matchmaking"])
+app.include_router(matchmaking_router, prefix="/api/v1", tags=["matchmaking"])
 app.include_router(guest_router,prefix="/api/v1",tags=["create new guest Account"])
 app.include_router(websocket_router,prefix="/api/v1",tags=["websocket"])
 

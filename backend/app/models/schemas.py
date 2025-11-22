@@ -9,7 +9,7 @@ class GameStateBase(SQLModel):
     realtime_score: Dict[str, int] = {} # {identifier_joueur: score_actuel}
     
     # Données Spécifiques au Joueur (ex: prêt à jouer, vies restantes, etc.)
-    player_data: Dict[str, Dict[str, Any]] = {} # {identifier_joueur: {statut_specifique}}
+    player_data: Dict[str, Any] = {} # {identifier_joueur: {statut_specifique}}
 
 class PlayerIdentifier(SQLModel):
     identifier: str
@@ -18,6 +18,12 @@ class PlayerIdentifier(SQLModel):
 class UserStats(SQLModel):
     victories:int
     defeats:int
+
+# Schéma de réponse pour la connexion
+class TokenResponse(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
+    player_identifier: str
 
 # Schéma de réponse pour la connexion
 class TokenResponse(SQLModel):

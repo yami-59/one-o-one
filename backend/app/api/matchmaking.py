@@ -1,10 +1,10 @@
 # /backend/app/api/matchmaking.py 
 
 
-from fastapi import APIRouter,status,Response
+from fastapi import APIRouter,status
 from app.core.db import SessionDep
-from app.utils.utils import Status,Games
-from app.models.schemas import *
+from app.utils.enums import Status
+from app.models.schemas import GameStateBase
 import uuid
 from app.models.tables import GameSession
 from app.utils.auth import get_current_player_id,TokenDep
@@ -37,11 +37,12 @@ async def join_queue(
         return {"status": Status.waiting, "message": "En attente d'un adversaire..."}
 
     elif player_id != WAITING_PLAYER_ID:
+
+        
     # Match trouvé 
         # Récupération des deux identifiants de joueurs :
         first_in_queue = WAITING_PLAYER_ID
         second_in_queue= player_id
-
 
         # Création de l'ID unique de la partie
         g_id = str(uuid.uuid4())
@@ -52,7 +53,7 @@ async def join_queue(
             game_id=g_id, 
             player1_identifier=first_in_queue, 
             player2_identifier=second_in_queue,
-            game_type=Games.word_search,
+            game_name="WORDSEARCH",
             game_data=GameStateBase().model_dump_json(indent=2)
         )
         
@@ -60,11 +61,9 @@ async def join_queue(
         await session.commit()
         await session.refresh(new_game)
         
-        # 3. RÉINITIALISATION DE LA FILE D'ATTENTE
-        WAITING_PLAYER_ID = None 
         
 
-        # 4. Envoi de la réponse finale au Joueur B
+        # Envoi de la réponse finale au Joueur B
         return {
             "status": Status.matched,
             # "game_id": new_game.game_id, # 🎯 La clé pour la connexion WebSocket
@@ -78,9 +77,14 @@ async def join_queue(
 
 
 
-@router.post("api/v1/matchmaking/leave",status_code=status.HTTP_200_OK)
-async def join_queue(
-    token:TokenDep,
-    session: SessionDep
-):
-    pass
+@router.post("/matchmaking/reset",status_code=status.HTTP_200_OK)
+def reset():
+
+
+    global WAITING_PLAYER_ID
+    
+    WAITING_PLAYER_ID=None
+
+    return {"message": "tous les joueurs on quitté la file"}
+    
+    

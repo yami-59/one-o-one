@@ -13,7 +13,3 @@ class Status(str, Enum):
     finished = "finished"
     abandoned = "abandoned"
 
-class Games(str,Enum):
-    word_search="WORD_SEARCH"
-    
-    pass

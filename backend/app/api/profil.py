@@ -11,7 +11,7 @@ from app.utils.auth import get_current_player_id,TokenDep
 # Créez l'objet router (assurez-vous qu'il est défini dans votre application principale)
 router = APIRouter(tags=["Profile"])
 
-@router.get("/api/v1/profile/{player_identifier}", response_model=UserStats)
+@router.get("/profile/{player_identifier}", response_model=UserStats)
 def read_Stats(
     token:TokenDep,
     session: SessionDep 

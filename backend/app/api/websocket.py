@@ -5,9 +5,8 @@ from sqlmodel import  select
 from typing import  Dict, List
 from app.core.db import SessionDep  # Pour la vérification DB
 from app.models.tables import GameSession # Pour vérifier l'existence de la partie
-from app.utils.auth import get_current_player_id,TokenDep
+from app.utils.auth import get_websocket_token,get_current_player_id
 import asyncio
-
 
 
 # --- État Global des Connexions (En mémoire) ---
@@ -31,6 +30,8 @@ async def broadcast_message(game_id: str, message: dict):
             conn.send_json(message) 
             for conn in ACTIVE_CONNECTIONS[game_id]
         ]
+
+        print(f"le nombre de message à envoyé en broadcast : {len(send_tasks)}")
         # Exécute toutes les tâches d'envoi sans attendre la fin de chacune
         await asyncio.gather(*send_tasks)
 
@@ -39,10 +40,9 @@ async def broadcast_message(game_id: str, message: dict):
 # ROUTE WEBSOCKET PRINCIPALE
 # -----------------------------------------------------------------
 
-@router.websocket("/ws/game/{game_id}/{player_identifier}")
+@router.websocket("/ws/game/{game_id}")
 async def websocket_endpoint(
     game_id: str,
-    token: TokenDep,
     session: SessionDep ,
     websocket: WebSocket,
 
@@ -50,11 +50,15 @@ async def websocket_endpoint(
     """
     Gère la connexion WebSocket pour une partie spécifique (vérification de l'ID, enregistrement).
     """
+
+    token=get_websocket_token(websocket)
     player_identifier=get_current_player_id(token)
+
+
     # 1. Vérification de la Session de Jeu en DB
-    game = session.exec(
+    game = (await session.exec(
         select(GameSession).where(GameSession.game_id == game_id)
-    ).first()
+    )).first()
     
     if not game:
         print(f"WS Échec: Partie {game_id} introuvable.")
@@ -84,13 +88,10 @@ async def websocket_endpoint(
             # Attend un message du client (doit être non-bloquant)
             data = await websocket.receive_json()
             
-            # --- Logique de Test (Écho et Débogage) ---
-            
-            if data.get("action") == "ready":
-                message = {"type": "server_info", "message": f"Server received ready from {player_identifier}"}
-            else:
-                # Pour le test, on renvoie simplement ce qu'on reçoit à tous les joueurs
-                message = {"type": "echo", "sender": player_identifier, "data": data}
+            # --- Logique de Test (Écho) ---
+
+            # Pour le test, on renvoie simplement ce qu'on reçoit à tous les joueurs
+            message = {"type": "echo", "sender": player_identifier, "data": data}
             
             # 5. Diffusion de la réponse à tous les joueurs de la partie
             await broadcast_message(game_id, message)

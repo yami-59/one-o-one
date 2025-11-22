@@ -10,6 +10,7 @@ from app.core.db import get_session
 from sqlalchemy.ext.asyncio import create_async_engine
 from app.models.schemas import *
 from app.models.tables import *
+from app.utils.auth import *
 
 
 
@@ -73,3 +74,5 @@ def client() -> Generator[TestClient, None,None]:
     """
     with TestClient(app=app) as client:
         yield client
+
+

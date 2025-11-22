@@ -1,7 +1,7 @@
 from sqlmodel import Field, SQLModel
 from .schemas import GameStateBase
 from datetime import datetime,timezone
-from app.utils.utils import Status
+from app.utils.enums import Status
 from pydantic import EmailStr
 from sqlalchemy.types import JSON
 from typing import List
@@ -12,7 +12,7 @@ class GameSession(SQLModel, table=True):
     game_id: str = Field(index=True, unique=True)
     
     # game_type: str = Field(foreign_key='gametype.type') 
-    game_type: str = Field(foreign_key='gametype.type') 
+    game_name: str | None = Field(default=None) 
     
     game_data: GameStateBase = Field(sa_type=JSON)
     
@@ -28,10 +28,6 @@ class GameSession(SQLModel, table=True):
             sa_type=DateTime(timezone=True) 
         )
 
-# --- NOUVEAU MODÈLE pour valider les types de jeu ---
-class GameType(SQLModel, table=True):
-    id:int|None = Field(default=None, primary_key=True)
-    type: str = Field(unique=True) # Ex: "mot_mele", "quiz"
 
 class User(SQLModel, table=True): 
     id: int|None = Field(default=None, primary_key=True)
@@ -57,3 +53,4 @@ class WordList(SQLModel, table=True):
     words: List[str] = Field(
         sa_type=JSON,
     )
+

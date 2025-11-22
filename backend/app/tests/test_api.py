@@ -1,10 +1,13 @@
 # /backend/tests/test_api.py
 import pytest
-from app.models.tables import *
-from sqlalchemy import select
-import uuid
+from app.models.tables import User,GameSession
+from sqlmodel import select
+from app.utils.auth import * 
 from app.models.schemas import *
-from app.utils.utils import *
+from app.utils.enums import *
+from fastapi import status
+from app.models.schemas import *
+from app.models.schemas import TokenResponse
 
 
 # Utilise la fixture 'client' définie dans conftest.py
@@ -14,173 +17,175 @@ def test_read_root(client):
     assert response.status_code == 200
     assert response.json() == {"message": "Bienvenue sur l'API One'o One. Voir /docs pour les endpoints."}
 
-# # 🎯 Si votre session est asynchrone, le test doit être marqué
-# @pytest.mark.asyncio 
-# async def test_create_guest(client,db_session): # 🎯 session est injectée par Pytest
+
+
+# /backend/tests/test_api.py (Test Player A rejoint une file vide)
+
+@pytest.mark.asyncio
+async def test_player_a_joins_queue_empty(client):
+    """
+    Vérifie que le premier joueur est placé dans la file d'attente (Status.waiting).
+    """
     
-#     # 1. Préparation des données d'entrée (simulons l'absence d'ID)
-#     # Le frontend envoie une requête pour créer un invité
+    player_id=generate_guest_identifier()
+    test_player_token=create_access_token(player_id)
+    test_auth_header = {"Authorization": f"Bearer {test_player_token}"}
+    # L'identifiant est transporté via le token, pas le corps de la requête.
+    response = client.post(
+        "/api/v1/matchmaking/join",
+        headers=test_auth_header, # 🎯 Fournit le JWT dans l'en-tête
+        json={} # Le corps peut être vide
+    )
     
-#     # 2. Exécution de la requête API (SYNCHRONE, si TestClient est utilisé)
-#     response = client.post(
-#         "/api/v1/new_guest"
-#     ) 
-
-#     response_data = response.json()
+    response_data = response.json()
     
-#     # Désérialisation pour récupérer l'identifiant
-#     player = User.model_validate(response_data)
+    # 1. Vérification du statut (202 ACCEPTED serait mieux pour l'attente)
+    assert response.status_code == status.HTTP_200_OK # Si la route retourne 200 OK
+    assert response_data["status"] == "waiting"
+
+
+    response=client.post(
+        "/api/v1/matchmaking/reset"  # Le corps peut être vide
+    )
+
+    response_data = response.json()
     
-#     #Vérification de l'existence dans la base de données
-#     query = (
-#         # 🎯 CORRECTION: Utilise la syntaxe SQLAlchemy/SQLModel
-#         select(User).where(User.identifier == player.identifier) 
-#     )
-
+    assert response.status_code == status.HTTP_200_OK
     
-#     #Exécution de la requête DB (DOIT être await si la session est asynchrone)
-#     result = await db_session.exec(query)
-#     user_in_db = result.first()
+    # 2. Vérification DB (Optionnel) : Vérifier que l'ID du joueur A est dans la variable globale
+    # Note: On ne peut pas facilement tester la variable globale 'WAITING_PLAYER_ID' dans un test unitaire,
+    # mais on peut vérifier l'état du serveur ou utiliser un mock si besoin.
+
+@pytest.mark.asyncio
+async def test_match_found_scenario(client, db_session):
+    # Créer les données d'identification de deux joueurs différents pour le test
+    player_a_id = generate_guest_identifier()
+    token_a = create_access_token(player_a_id, timedelta(minutes=30))
+    header_a = {"Authorization": f"Bearer {token_a}"}
+
+    player_b_id = generate_guest_identifier()
+    token_b = create_access_token(player_b_id, timedelta(minutes=30))
+    header_b = {"Authorization": f"Bearer {token_b}"}
+
+
+    # 1. Joueur A rejoint la file (Setup)
+    client.post("/api/v1/matchmaking/join", headers=header_a, json={}) 
+
+    # 2. Joueur B rejoint la file (Exécution du Test)
+    response_b = client.post("/api/v1/matchmaking/join", headers=header_b, json={})
     
-#     # Validation de la réponse API
-#     assert response.status_code == 201 # Le code doit être 200/201 selon votre implémentation
-#     # Assertion
-#     assert user_in_db is not None, "L'utilisateur n'a pas été créé en base de données."
+    response_data = response_b.json()
 
-# @pytest.mark.asyncio
-# async def test_join_queue(client,db_session):
+    # 3. Validation de la Réponse
+    assert response_data["status"] == "matched"
+    assert response_data["opponent_identifier"] == player_a_id # Vérifie le Match FCFS
     
-#     # création d'un utilisateur factice dans la db
-#     u_id1=str(uuid.uuid4())
-#     u_id2=str(uuid.uuid4())
-#     playerA=PlayerIdentifier(identifier=u_id1)
+    # 4. Vérification de la création de la GameSession dans la DB (via db_session)
+    # ...
+
+
+
+@pytest.mark.asyncio 
+async def test_guest_login(client, db_session): # Fixture db_session est l'AsyncSession
     
-#     playerB=PlayerIdentifier(identifier=u_id2)
+    # 1. Exécution de la requête API (crée l'utilisateur)
+    # Le TestClient est synchrone (pas d'await sur l'appel client.post)
+    response = client.post(
+        "/api/v1/guest/login"
+    ) 
 
-#     playerA.model_dump_json()
-#     # Test du premier joueur à etre en attente
-#     response = client.post(
-#         "/api/v1/join-queue", 
-#         json=playerA.model_dump() # 🎯 Les données JSON sont passées via l'argument 'json'
-#     )
-
-#     response_data=response.json()
-
-
-#     assert response.status_code==200
-#     assert response_data["message"]=="En attente d'un adversaire..."
-#     assert response_data["status"] == Status.waiting
-
-
-#     # test de même joueur renvoyant une requête à l'api
-#     response = client.post(
-#         "/api/v1/join-queue", 
-#         json=playerA.model_dump() # 🎯 Les données JSON sont passées via l'argument 'json'
-#     )
-
-#     response_data=response.json()
-
+    response_data = response.json()
     
-#     assert response.status_code==200
-#     assert response_data["message"]=="Vous êtes déjà en file d'attente."
-#     assert response_data["status"] == Status.alreadyWaiting
-
-
-#     #test du second joueur arrivant en file d'attente 
-#     response = client.post(
-#         "/api/v1/join-queue", 
-#         json=playerB.model_dump() # 🎯 Les données JSON sont passées via l'argument 'json'
-#     )
-
-#     response_data=response.json()
-
-
-#     #Vérification de l'existence dans la base de données
-#     query = (
-#         # 🎯 CORRECTION: Utilise la syntaxe SQLAlchemy/SQLModel
-#         select(GameSession).where(GameSession.player1_identifier==playerA.identifier and GameSession.player2_identifier==playerB.identifier) 
-#     )
-
-#     #Exécution de la requête DB (DOIT être await si la session est asynchrone)
-#     result = await db_session.exec(query)
-#     game = result.first()
-
+    # 2. Validation du Statut HTTP
+    assert response.status_code == status.HTTP_201_CREATED
     
+    # 3. Désérialisation pour obtenir l'objet complet créé
+    # Pydantic validera les données de la réponse (y compris l'ID généré par la DB)
+    tokenResponse = TokenResponse.model_validate(response_data)
+    
+    # 4. Vérification de l'existence dans la base de données (en utilisant l'ID créé)
+    query = (
+        select(User)
+        .where(User.identifier == tokenResponse.player_identifier) 
+    )
+    
+    # 5. Exécution de la requête DB
+    result = await db_session.exec(query)
+    
+    # Utiliser .scalars().first() pour désencapsuler l'objet User du curseur
+    user_in_db = result.first()
+    
+    # 6. Assertions finales
+    assert user_in_db is not None, "L'utilisateur n'a pas été créé en base de données."
+    assert user_in_db.identifier == tokenResponse.player_identifier, "L'ID de l'utilisateur dans la DB ne correspond pas à l'ID de la réponse."
+
+
+
+# On suppose que db_session et client sont des fixtures injectées
+
+@pytest.mark.asyncio
+async def test_websocket_broadcast(client, db_session):
+    """
+    Teste la connexion, la diffusion (broadcast) et la réception de messages 
+    entre deux joueurs connectés à la même session de jeu.
+    """
+    # --- 1. SETUP: Créer les utilisateurs et la session de jeu en DB ---
+    
+    player_a_id = f"test-p-a-{uuid.uuid4()}"
+    player_b_id = f"test-p-b-{uuid.uuid4()}"
+    game_uuid = str(uuid.uuid4())
+
+
+    token_a = create_access_token(player_a_id, timedelta(minutes=30))
+    header_a = {"Authorization": f"Bearer {token_a}"}
+    token_b = create_access_token(player_b_id, timedelta(minutes=30))
+    header_b = {"Authorization": f"Bearer {token_b}"}
+    
+
+    # Créer et enregistrer la GameSession
+    game_session = GameSession(
+        game_id=game_uuid,
+        player1_identifier=player_a_id,
+        player2_identifier=player_b_id,
+        # 🎯 Utiliser l'objet Python qui sera sérialisé en JSONB
+        game_data=GameStateBase().model_dump_json(), 
+        game_name="WORDSEARCH"
+    )
+    
+    db_session.add(User(identifier=player_a_id))
+    db_session.add(User(identifier=player_b_id))
+    db_session.add(game_session)
+    await db_session.commit()
+    await db_session.refresh(game_session)
+    
+    # --- 2. CONNEXION ET CONSOMMATION DES MESSAGES DE SETUP ---
+    
+    ws_url = f"api/v1/ws/game/{game_uuid}"
+
+    with client.websocket_connect(f"{ws_url}",headers=header_a) as websocket_a, \
+         client.websocket_connect(f"{ws_url}",headers=header_b) as websocket_b:
         
-#     assert response.status_code==200
-#     assert response_data["message"]=="Match trouvé ! Début de la session de jeu."
-#     assert response_data["status"] == Status.matched
-#     assert response_data["opponent_identifier"]== playerA.identifier
-#     assert game is not None , "Le jeux n'est pas en bd ou les données ne sont pas bonnes"
-     
-#     pass
-
-# @pytest.mark.asyncio
-# async def test_websocket_broadcast(client, db_session):
-#     """
-#     Teste si deux joueurs peuvent se connecter à un même game_id valide 
-#     et si les messages sont diffusés (broadcast) à tous les connectés.
-#     """
-#     # --- 1. SETUP: Créer les utilisateurs et la session de jeu en DB ---
-    
-#     # Créer les identifiants de test (Player A et Player B)
-#     player_a_id = f"test-p-a-{uuid.uuid4()}"
-#     player_b_id = f"test-p-b-{uuid.uuid4()}"
-#     game_uuid = str(uuid.uuid4())
-    
-#     # Créer les utilisateurs dans la DB de test
-#     user_a = User(identifier=player_a_id)
-#     user_b = User(identifier=player_b_id)
-#     db_session.add(user_a)
-#     db_session.add(user_b)
-    
-#     # Créer l'objet GameSession (avec des données minimales)
-#     game_session = GameSession(
-#         game_id=game_uuid,
-#         player1_identifier=player_a_id,
-#         player2_identifier=player_b_id,
-#         # Utiliser un dictionnaire simple pour l'état JSONB si GameStateBase n'est pas encore prêt
-#         current_state={}, 
-#         game_type="mot_mele"
-#     )
-#     db_session.add(game_session)
-#     await db_session.commit()
-#     await db_session.refresh(game_session)
-    
-#     # --- 2. CONNEXION DES JOUEURS ---
-    
-#     # La route WS est /ws/game/{game_id}/{player_identifier}
-#     ws_url = f"/ws/game/{game_uuid}"
-
-#     # Utiliser le TestClient (synchrone) pour simuler la connexion asynchrone
-#     with client.websocket_connect(f"{ws_url}/{player_a_id}") as websocket_a, \
-#          client.websocket_connect(f"{ws_url}/{player_b_id}") as websocket_b:
+        # Amélioration: Consommer tous les messages "player_joined" envoyés
+        # par le broadcast lors des deux connexions, sans supposer qu'il y en a exactement 4.
+        # Nous lisons jusqu'à ce que le buffer soit vide ou que le message crucial arrive.
         
-#         # 3. CONSOMMER LES MESSAGES DE CONNEXION INITIALE (handshake + player_joined)
-#         # Chaque joueur reçoit un message 'player_joined' de lui-même et de son adversaire.
-#         # On lit les messages en double pour vider le buffer.
-#         websocket_a.receive_json() 
-#         websocket_a.receive_json() 
-#         websocket_b.receive_json()
-#         websocket_b.receive_json()
+        # On lit un message final de B pour confirmer qu'il a bien reçu les messages précédents
+        initial_join_b = websocket_b.receive_json()
+        assert initial_join_b["type"] == "player_joined"
 
-#         # --- 4. ACTION : Le joueur A envoie un message ---
-#         test_message = {"action": "move", "data": "mot_selectionne"}
-#         websocket_a.send_json(test_message)
+        # --- 3. ACTION : Le joueur A envoie un message ---
+        test_message = {"action": "move", "data": "mot_selectionne"}
+        websocket_a.send_json(test_message)
 
-#         # --- 5. ASSERTION : Le joueur B reçoit le message du joueur A ---
-#         # Le serveur devrait renvoyer un message d'écho à tous les connectés.
+        # --- 4. ASSERTION : Le joueur B reçoit le message du joueur A ---
         
-#         # On lit le message reçu par le joueur B
-#         received_data = websocket_b.receive_json() 
+        # On lit le message d'écho reçu par le joueur B
+        received_data = websocket_b.receive_json() 
+                
+        # Vérification du contenu diffusé
+        assert received_data["type"] == "echo"
+        assert received_data["sender"] == player_a_id
+        assert received_data["data"]["data"] == "mot_selectionne"
         
-#         # Vérification du contenu diffusé
-#         assert received_data["type"] == "echo"
-#         assert received_data["sender"] == player_a_id
-#         assert received_data["data"]["data"] == "mot_selectionne"
         
-#         print(f"\n✅ Test WS réussi: Diffusion du message de {player_a_id} à {player_b_id}.")
-        
-#     # Le bloc 'with' se termine et nettoie les connexions WS.
-#     # Le rollback de la fixture db_session nettoie les données DB créées.
-
+        print(f"\n✅ Test WS réussi: Diffusion du message de {player_a_id} à {player_b_id}.")

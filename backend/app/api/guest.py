@@ -2,34 +2,29 @@ from sqlmodel import  SQLModel,select
 from app.core.db import SessionDep
 from fastapi import APIRouter,status,HTTPException
 from app.models.tables import User
-from app.utils.auth import *
-import uuid
-
+from app.utils.auth import generate_guest_identifier,create_access_token,get_current_player_id,TokenDep
+from app.models.schemas import TokenResponse
 router = APIRouter()
 
 
-# Schéma de réponse pour la connexion
-class TokenResponse(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
-    player_identifier: str
 
-@router.post("/api/v1/guest/login", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-def login_guest(session: SessionDep):
+@router.post("/guest/login", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+async def login_guest(session: SessionDep):
     """
     Crée un compte utilisateur invité et génère un JWT pour l'authentification.
     """
     # 1. Génération de l'identifiant unique (UUID ou autre méthode sûre)
   
-    new_identifier = "guest-"+str(uuid.uuid4())
+    new_identifier = generate_guest_identifier()
+
 
     # 2. Création de l'utilisateur dans la DB
     db_user = User(identifier=new_identifier)
     
     try:
         session.add(db_user)
-        session.commit()
-        session.refresh(db_user)
+        await session.commit()
+        await session.refresh(db_user)
     except Exception as e:
         # Gérer l'erreur si l'insertion échoue
         raise HTTPException(
@@ -38,10 +33,7 @@ def login_guest(session: SessionDep):
         )
 
     # 3. Création du Jeton JWT
-    access_token = create_access_token(
-        # Utiliser 'sub' (subject) pour stocker l'identifiant unique du joueur
-        data={"sub": new_identifier} 
-    )
+    access_token = create_access_token(new_identifier )
 
     # 4. Retourner le jeton et l'identifiant au client
     return TokenResponse(
@@ -56,7 +48,7 @@ def login_guest(session: SessionDep):
 # ---------------------------------------------------------------------------------
 
 @router.post("/guest/refresh", status_code=status.HTTP_200_OK, response_model=TokenResponse)
-def refresh_guest_token(
+async def refresh_guest_token(
     # Le jeton est extrait de l'en-tête Authorization
     token_to_refresh: TokenDep,
     session: SessionDep
@@ -80,7 +72,7 @@ def refresh_guest_token(
     
     # 2. Vérification de l'existence de l'utilisateur en DB
     statement = select(User).where(User.identifier == player_identifier)
-    user = session.exec(statement).first()
+    user = await session.exec(statement).first()
 
     if not user:
         raise HTTPException(
@@ -89,9 +81,7 @@ def refresh_guest_token(
         )
 
     # 3. Génération d'un nouveau jeton JWT
-    new_access_token = create_access_token(
-        data={"sub": player_identifier} 
-    )
+    new_access_token = create_access_token(player_identifier)
 
     # 4. Retourner le nouveau jeton
     return TokenResponse(
