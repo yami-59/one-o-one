@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.models.schemas import *
 from app.models.tables import *
 from app.utils.auth import *
-
+from app.games.wordsearch.wordsearch_generator import WordSearchGenerator
 
 
 # --- 1. MOTEUR ET SESSION DE TEST ---
@@ -76,3 +76,14 @@ def client() -> Generator[TestClient, None,None]:
         yield client
 
 
+# --- Fixture pour les données de test ---
+@pytest.fixture
+def test_word_list() -> List[str]:
+    """Liste de mots de test."""
+    return ["PYTHON", "FASTAPI", "CODE", "TEST", "DEV", "GAME", "API", "WS", "SQL"]
+
+@pytest.fixture(scope="function")
+def generator(test_word_list) -> WordSearchGenerator:
+    """Initialise le générateur de grille pour les tests."""
+    # La grille est de 10x10 par défaut
+    return WordSearchGenerator(word_list=test_word_list, grid_size=10)

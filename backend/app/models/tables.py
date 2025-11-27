@@ -27,6 +27,7 @@ class GameSession(SQLModel, table=True):
             sa_type=DateTime(timezone=True) 
         )
 
+    winner_id : str |None = Field(default=None)
 
 class User(SQLModel, table=True): 
     id: int|None = Field(default=None, primary_key=True)

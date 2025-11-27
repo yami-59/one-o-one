@@ -8,6 +8,7 @@ from app.models.schemas import GameStateBase
 import uuid
 from app.models.tables import GameSession
 from app.utils.auth import get_current_player_id,TokenDep
+from app.utils.enums import GameName
 
 
 
@@ -53,7 +54,7 @@ async def join_queue(
             game_id=g_id, 
             player1_identifier=first_in_queue, 
             player2_identifier=second_in_queue,
-            game_name="WORDSEARCH",
+            game_name=GameName.wordsearch,
             game_data=GameStateBase().model_dump_json(indent=2)
         )
         
