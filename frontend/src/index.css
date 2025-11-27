@@ -1,5 +1,7 @@
 @import url('./styles/font.css');
 @import 'tailwindcss';
+@plugin "tailwind-scrollbar";
+
 
 
 :root {
@@ -31,5 +33,21 @@ h1 {
   font-size: 3.2em;
 }
 
+
+/* Scrollbar pour Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background:var(--bg-purple);  /* Couleur du fond de la scrollbar */
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #eeeeee;   /* Couleur du curseur de scroll */
+  border-radius: 10px;
+  border: 2px solid #f3f4f6;   /* Donne un effet de "padding" autour du thumb */
+}
 
 /* /frontend/src/index.css */

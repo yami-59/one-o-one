@@ -1,7 +1,7 @@
 // /frontend/src/App.tsx
 
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import HomePage from './pages/HomePage.tsx'; 
+import HomePage from './pages/sample.tsx'; 
 
 // ... autres imports ...
 

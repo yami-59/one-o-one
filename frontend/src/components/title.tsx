@@ -1,5 +1,7 @@
 import logo from '../assets/logo_v2.png'
 import '../styles/title.css'
+
+
 const Title = () => {
   return (
      <div id="titleDiv" className="inline-flex flex-row items-center absolute left-1/3">
