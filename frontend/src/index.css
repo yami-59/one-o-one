@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+/* Configuration de ton thème (Couleurs du Logo) */
+@theme {
+  --color-brand-pink: #EC4899;  /* Le Rose du logo */
+  --color-brand-blue: #3B82F6;  /* Le Bleu du logo */
+  --color-brand-yellow: #F59E0B; /* Le Jaune (Or) */
+  --color-dark-bg: #111827;     /* Fond sombre */
+  --color-dark-card: #1F2937;   /* Fond des cartes */
+}
+
+/* Styles de base */
+body {
+  background-color: var(--color-dark-bg);
+  color: white;
+  font-family: 'Inter', system-ui, sans-serif;
+}

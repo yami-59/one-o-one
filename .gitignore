@@ -1,0 +1,8 @@
+# Ignore tous les fichiers et dossiers qui commencent par un point
+# (dotfiles, .DS_Store, .vscode, .idea, etc.)
+.*
+
+# EXCEPTION : N'ignore PAS les fichiers essentiels de Git
+!/.gitignore
+!/.gitattributes
+!/.gitkeep
