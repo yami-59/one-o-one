@@ -3,9 +3,10 @@
 import redis.asyncio as aioredis
 from typing import AsyncGenerator
 from app.core.settings import settings
+from redis.asyncio import Redis as AsyncRedis
 
 # Variable globale pour stocker la connexion Redis (sera initialisée au démarrage)
-redis_client: aioredis.Redis | None = None
+redis_client: AsyncRedis | None = None
 
 # --- 1. Fonction d'Initialisation (Lifespan) ---
 async def startup_redis():
@@ -32,7 +33,7 @@ async def shutdown_redis():
         print("🔌 Connexion Redis fermée.")
 
 # --- 2. Dépendance FastAPI ---
-async def get_redis_client() -> AsyncGenerator[aioredis.Redis, None]:
+async def get_redis_client() -> AsyncGenerator[AsyncRedis, None]:
     """
     Dépendance FastAPI pour injecter le client Redis dans les routes.
     """

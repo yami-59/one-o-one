@@ -2,7 +2,6 @@ from typing import Dict, Any
 from sqlmodel import SQLModel 
 from sqlmodel import SQLModel ,Field
 from typing import Dict, List, Any, Tuple
-from app.utils.enums import Direction
 
 
 
@@ -38,6 +37,8 @@ class WordSolution(SQLModel):
     direction:Tuple
 
 
+
+
 class GameStateBase(SQLModel):
     """
     Classe parent agnostique au tour. Définit l'état commun à tous les jeux.
@@ -48,6 +49,9 @@ class GameStateBase(SQLModel):
     # Données Spécifiques au Joueur (ex: prêt à jouer, vies restantes, etc.)
     player_data: Dict[str, Any] = {} # {identifier_joueur: {statut_specifique}}
 
+   
+        
+        
 
 
 
@@ -62,16 +66,17 @@ class WordSearchState(GameStateBase):
 
     # 1. Structure de la Grille
     # La grille 10*10 avec les lettres à afficher
-    grid_data: List[List[str]] = Field(default_factory=list) 
+    grid_data: List[List[str]]
     
     # 2. La Solution (la vérité de ce qui est caché)
     # Liste des mots que les joueurs doivent trouver
-    solution_words: List[WordSolution] = Field(default_factory=list)
+    solution_words: List[WordSolution] 
     
     # 3. Le Suivi de la Progression
     # Stocke les mots déjà trouvés (pour empêcher la double validation)
-    words_found: Dict[str, List[str]] = Field(default_factory=dict) 
+    words_found: Dict[str, List[str]] = {}
     # Format: {player_identifier: [word1, word2, ...]}
+
     
 
 

@@ -13,15 +13,13 @@ class WordSearchGenerator:
     """
     Gère la création de la grille et le placement des mots.
     """
-    # ⚠️ Attributs d'instance : ne pas les typer ici si ce n'est pas nécessaire
-    # grid: List[List[str]]
-    solutions: List[WordSolution] 
+   
 
     def __init__(self, word_list: List[str], grid_size: int = 10):
         self.word_list = word_list
         self.grid_size = grid_size
         self.grid = [["." for _ in range(self.grid_size)] for _ in range(self.grid_size)]
-        self.solutions = []
+        self.solutions : List[WordSolution] = []
         
         # Convertir tous les mots en majuscules à l'initialisation
         self.word_list = [word.upper() for word in self.word_list]

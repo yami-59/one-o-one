@@ -12,6 +12,13 @@ from app.models.schemas import *
 from app.models.tables import *
 from app.utils.auth import *
 from app.games.wordsearch.wordsearch_generator import WordSearchGenerator
+from app.games.wordsearch.wordsearch_engine import WordSearchEngine
+import uuid
+from redis.asyncio import Redis as AsyncRedis
+from app.utils.enums import GameName
+
+
+
 
 
 # --- 1. MOTEUR ET SESSION DE TEST ---
@@ -32,6 +39,10 @@ async def get_session_test() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSession(engine_test) as session:
         yield session
 
+
+
+
+# --- 1. FIXTURE DE LA CONNEXION A LA DB ---
 @pytest_asyncio.fixture(scope="function") # Scope function pour l'isolation des tests DB
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
     """
@@ -45,10 +56,7 @@ async def db_session() -> AsyncGenerator[AsyncSession, None]:
         await session.rollback()
 
 
-
-
-
-# --- 2. FIXTURE DE SETUP DE LA DB (CORRIGÉE) ---
+# --- 2. FIXTURE DE SETUP DE LA DB ---
 
 @pytest_asyncio.fixture(scope="session", autouse=True)
 async def setup_db(): 
@@ -64,6 +72,37 @@ async def setup_db():
     
     yield
 
+# --- FIXTURE DU CLIENT REDIS ---
+@pytest_asyncio.fixture(scope="function")
+async def redis_client() -> AsyncGenerator[AsyncRedis, None]:
+
+    REDIS_TEST_URL = "redis://localhost:6379/15" # Utiliser une base de données distincte (ex: 15) pour les tests
+
+    """
+    Crée une connexion asynchrone à Redis, de portée session.
+    La connexion est ouverte avant le premier test et fermée après le dernier.
+    """
+    # 1. Connexion au client Redis
+    client = AsyncRedis.from_url(REDIS_TEST_URL)
+
+    try:
+        # Vérification de la connexion (ping) pour s'assurer que Redis est accessible
+        await client.ping()
+        print(f"\n--- Connexion Redis (TEST) établie à {REDIS_TEST_URL} ---")
+    except Exception as e:
+        pytest.fail(f"Impossible de se connecter à Redis de test à {REDIS_TEST_URL}: {e}")
+        
+    # 2. Yield : Céder la ressource aux tests
+    # Le code ci-dessous (après yield) sera exécuté après tous les tests de la session
+    yield client
+
+    # 3. Teardown (Nettoyage après la session)
+    print("\n--- Fermeture de la connexion Redis (TEST) ---")
+    await client.aclose()
+
+    # 4. Optionnel mais recommandé : Vider la base de données de test
+
+    await client.flushdb()
 
 # --- 3. FIXTURE DU CLIENT DE TEST ---
 
@@ -76,7 +115,7 @@ def client() -> Generator[TestClient, None,None]:
         yield client
 
 
-# --- Fixture pour les données de test ---
+# --- 4. FIXTURE DE LA CLASSE QUI GENERE LA GRILLE DE MOT-MELE ---
 @pytest.fixture
 def test_word_list() -> List[str]:
     """Liste de mots de test."""
@@ -87,3 +126,5 @@ def generator(test_word_list) -> WordSearchGenerator:
     """Initialise le générateur de grille pour les tests."""
     # La grille est de 10x10 par défaut
     return WordSearchGenerator(word_list=test_word_list, grid_size=10)
+
+

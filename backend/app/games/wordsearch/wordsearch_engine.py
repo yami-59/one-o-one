@@ -22,7 +22,6 @@ class WordSearchEngine:
         self.game_id = game_id
         self.db_session = db_session
         self.redis = redis_client
-        
         self.POINTS_PER_WORD = 10 
 
     # --- MÉTHODES DE GESTION DE L'ÉTAT (I/O) ---
@@ -41,6 +40,7 @@ class WordSearchEngine:
     async def _save_game_state(self, state: WordSearchState):
         """Sauvegarde l'état actuel de la partie dans Redis."""
         json_state = state.model_dump_json(indent=2)
+
         # Utilise SET avec TTL (Time To Live) si nécessaire, sinon sans TTL
         await self.redis.set(f"game:{self.game_id}", json_state)
 
@@ -83,10 +83,6 @@ class WordSearchEngine:
         return "".join(reconstructed_word).upper()             
         
 
-
-        
-        
-
     async def validate_selection(self, player_id: str, selected_obj: WordSolution) -> Dict[str, Any]:
         """
         Vérifie si le mot sélectionné (word) est valide ET s'il correspond à une
@@ -108,6 +104,9 @@ class WordSearchEngine:
             state.grid_data, 
             selected_obj
         )
+
+        print(f"{reconstructed_word}/{selected_obj.word}")
+
         
         if reconstructed_word != selected_obj.word:
             # Si la sélection sur la grille ne correspond pas au mot soumis
@@ -118,6 +117,8 @@ class WordSearchEngine:
         # -----------------------------------------------------------
         
         # Vérification que le mot soumis est bien une solution (et non pas juste des lettres aléatoires)
+
+
         solution_exists = any(selected_obj.word == sol.word for sol in state.solution_words)
 
         if not solution_exists:

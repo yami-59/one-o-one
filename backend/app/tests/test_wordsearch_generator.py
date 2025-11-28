@@ -82,6 +82,3 @@ def test_generate_full_grid(generator):
 
         assert word == solution.word
         
-        
-        # ... (implémentation de la vérification des coordonnées) ...
-        # Le test passe si le mot reconstructible par les coordonnées est correct.

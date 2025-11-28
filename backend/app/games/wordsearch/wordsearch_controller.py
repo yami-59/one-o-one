@@ -50,7 +50,7 @@ class WordGame:
         except Exception as e:
             print(f"Erreur fatale dans le minuteur du jeu : {e}")
 
-    async def initialize_and_start_game(self) -> WordSearchState:
+    async def initialize_and_start_game(self) -> None:
         """
         Génère la grille, crée l'état initial du jeu, et le sauvegarde.
         """
@@ -69,16 +69,15 @@ class WordGame:
         # 3. Sauvegarde dans Redis (pour l'état actif)
         await self.engine._save_game_state(initial_state)
         
-        # 4. (Optionnel) Mise à jour de la GameSession PostgreSQL si nécessaire
         
-        
-        
+            
         # Démarrage du Minuteur Actif
         # Crée la tâche d'arrière-plan pour la boucle d'événements
         self.timeout_task = asyncio.create_task(self._schedule_timeout())
 
+        return {"message":"started","timer":self.GAME_DURATION_SECONDS}
 
-        return initial_state
+
 
     async def process_player_action(self, player_id: str, selected_data: Dict[str, Any]) -> Dict[str, Any]:
         """

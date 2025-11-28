@@ -13,7 +13,7 @@ class GameSession(SQLModel, table=True):
     
     game_name: str | None = Field(default=None) 
     
-    game_data: GameStateBase = Field(sa_type=JSON)
+    game_data: GameStateBase | None  = Field(default=None,sa_type=JSON)
     
     player1_identifier: str = Field(foreign_key='user.identifier')
     player2_identifier: str = Field(foreign_key='user.identifier')
