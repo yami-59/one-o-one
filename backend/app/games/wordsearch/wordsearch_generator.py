@@ -3,7 +3,6 @@ import random
 import itertools
 from typing import  List, Tuple
 from app.models.schemas import WordSolution # Le schéma d'état spécifique
-from app.utils.enums import Direction
 
 
 
@@ -32,42 +31,40 @@ class WordSearchGenerator:
     def _getEndPos(
         self,
         word: str, # ⚠️ Type hint corrigé en str
-        startPostion: Tuple[int, int],
-        direction: Direction,
-    ) -> Tuple[int, int]:
+        start_index: Dict[str,int],
+        direction: Tuple[int,int],
+    ) -> Dict[str, int]:
         
         M = len(word) # Longueur du mot
-        dl, dc = direction.value
-        start_row, start_col = startPostion
+        dl, dc = direction
         
-        final_row = start_row + (M - 1) * dl
-        final_col = start_col + (M - 1) * dc
+        final_row = start_index['row'] + (M - 1) * dl
+        final_col = start_index['col'] + (M - 1) * dc
 
-        return (final_row, final_col)
+        return {"row":final_row,"col": final_col}
     
     
     def _check_fit(
         self,
         word: str,
-        startPostion: Tuple[int, int],
-        direction: Direction,
+        start_index: Dict[str,int],
+        direction: Tuple[int,int],
     ) -> bool:
         
         M = len(word)
-        start_row, start_col = startPostion
-        dl, dc = direction.value
+        dl, dc = direction
 
         # 1. VÉRIFICATION DES LIMITES
-        final_row, final_col = self._getEndPos(word, startPostion, direction)
+        end_index = self._getEndPos(word, start_index, direction)
 
 
-        if not (0 <= final_row < self.grid_size and 0 <= final_col < self.grid_size):
+        if not (0 <= end_index['row'] < self.grid_size and 0 <= end_index['col'] < self.grid_size):
             return False
             
         # 2. VÉRIFICATION DES COLLISIONS ET CROISEMENTS
         for i in range(M):
-            r = start_row + i * dl
-            c = start_col + i * dc
+            r = start_index['row'] + i * dl
+            c = start_index['col'] + i * dc
             
             target_letter = word[i].upper()
             current_cell_content = self.grid[r][c] # 🎯 Utilise la grille d'instance
@@ -81,17 +78,16 @@ class WordSearchGenerator:
     def _fill_grid(
         self,
         word: str,
-        startPostion: Tuple[int, int],
-        direction: Direction,
-    ):
+        start_index: Dict[str, int],
+        direction: Tuple[int,int],
+    ) -> None:
         
         M = len(word)
-        dl, dc = direction.value
-        start_row, start_col = startPostion
+        dl, dc = direction
 
         for i in range(M):
-            r = start_row + i * dl
-            c = start_col + i * dc
+            r = start_index['row'] + i * dl
+            c = start_index['col'] + i * dc
 
             self.grid[r][c] = word[i] # 🎯 Modifie la grille d'instance
 
@@ -138,31 +134,39 @@ class WordSearchGenerator:
         all_coordinates = list(itertools.product(range(self.grid_size), repeat=2))
         random.shuffle(all_coordinates) 
 
+
+        all_directions = list(itertools.product((-1,0,1),repeat=2))
+        
+        # retire le vecteur (0,0) qui ne sert à rien 
+        all_directions = [direction for direction in all_directions if direction != (0,0) ]
+
         # 2. Boucle Principale de Placement
         for word in self.word_list:
             word_placed = False
-            shuffled_directions = list(Direction) 
-            random.shuffle(shuffled_directions)
+            
+            random.shuffle(all_directions)
 
             for start_row, start_col in all_coordinates:
-                start_pos = (start_row, start_col)
+                start_index = {
+                    "row":start_row,
+                     "col": start_col
+                }
 
-                for direction in shuffled_directions :
+                for direction in all_directions :
                     # 3. Vérification : Utilise self._check_fit
-                    if self._check_fit(word, start_pos, direction): 
+                    if self._check_fit(word, start_index, direction): 
 
                         # 4. Placement réussi
-                        self._fill_grid(word, start_pos, direction)
+                        self._fill_grid(word, start_index, direction)
                         
                         # 5. Enregistrement de la solution
-                        end_pos = self._getEndPos(word, start_pos, direction)
+                        end_index = self._getEndPos(word, start_index, direction)
                         
                         self.solutions.append(
                             WordSolution(
                                 word=word,
-                                start_pos=start_pos,
-                                end_pos=end_pos,
-                                direction=direction.value
+                                start_index=start_index,
+                                end_index=end_index,
                             )
                         )
                         word_placed = True

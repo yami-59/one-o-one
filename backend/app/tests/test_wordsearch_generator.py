@@ -1,4 +1,3 @@
-from app.utils.enums import Direction
 from app.games.wordsearch.wordsearch_engine import WordSearchEngine
 
 
@@ -16,7 +15,7 @@ def test_check_fit_valid_placement(generator):
     """Teste le placement d'un mot simple sur une grille vide."""
     
     # Tentative de placement de 'DEV' à partir de (0, 0) vers BAS_DROITE
-    is_valid = generator._check_fit("DEV", (0, 0), Direction.BAS_DROITE)
+    is_valid = generator._check_fit("DEV", {"row":0,"col": 0}, (1,1))
     assert is_valid is True
 
 def test_check_fit_invalid_collision(generator):
@@ -33,7 +32,7 @@ def test_check_fit_invalid_collision(generator):
     
     # Mot à Placer : "ABC"
     # L'algorithme essaiera de placer 'B' à la position (0, 1) qui contient 'Z'.
-    is_valid = generator._check_fit("ABC", (0, 0), Direction.DROITE)
+    is_valid = generator._check_fit("ABC",{"row":0,"col": 0}, (0,1))
     
     # 🎯 L'assertion est correcte : le placement doit échouer
     assert is_valid is False
@@ -49,7 +48,7 @@ def test_check_fit_valid_overlap(generator):
     
     # L'algorithme essaiera de placer 'T' à (0, 1) qui contient déjà 'T'.
     
-    is_valid = generator._check_fit("TI", (0, 1), Direction.DROITE)
+    is_valid = generator._check_fit("TI",{"row":0,"col": 1}, (0,1))
     
     # Le placement est valide car la lettre est la même.
     assert is_valid is True
@@ -78,7 +77,7 @@ def test_generate_full_grid(generator):
     
     # 4. Vérification de la cohérence de la solution (vérifie si la solution existe dans la grille)
     for solution in solutions:
-        word = WordSearchEngine.reconstruct_word_from_coords(grid,solution)
+        word = WordSearchEngine.reconstruct_word(grid,solution)
 
         assert word == solution.word
         

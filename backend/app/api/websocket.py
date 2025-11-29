@@ -31,7 +31,7 @@ async def broadcast_message(game_id: str, message: dict):
             for conn in ACTIVE_CONNECTIONS[game_id]
         ]
 
-        print(f"le nombre de message à envoyé en broadcast : {len(send_tasks)}")
+
         # Exécute toutes les tâches d'envoi sans attendre la fin de chacune
         await asyncio.gather(*send_tasks)
 
@@ -50,7 +50,6 @@ async def websocket_endpoint(
     """
     Gère la connexion WebSocket pour une partie spécifique (vérification de l'ID, enregistrement).
     """
-
     token=get_websocket_token(websocket)
     player_identifier=get_current_player_id(token)
 
@@ -73,6 +72,7 @@ async def websocket_endpoint(
         ACTIVE_CONNECTIONS[game_id] = []
     
     # Enregistre la connexion
+
     ACTIVE_CONNECTIONS[game_id].append(websocket)
     print(f"WS Connexion établie: Joueur {player_identifier} pour {game_id}")
 
@@ -88,6 +88,75 @@ async def websocket_endpoint(
             # Attend un message du client (doit être non-bloquant)
             data = await websocket.receive_json()
             
+            # --- Logique de Test (Écho) ---
+
+            # Pour le test, on renvoie simplement ce qu'on reçoit à tous les joueurs
+            message = {"type": "echo", "sender": player_identifier, "data": data}
+            
+            # 5. Diffusion de la réponse à tous les joueurs de la partie
+            await broadcast_message(game_id, message)
+
+    except WebSocketDisconnect:
+        # 6. Déconnexion
+        print(f"WS Déconnexion: Joueur {player_identifier} de la partie {game_id}")
+        
+        # Supprime la connexion de la liste active
+        ACTIVE_CONNECTIONS[game_id].remove(websocket)
+        
+        # Notifie l'adversaire (et soi-même pour le journal)
+        await broadcast_message(
+            game_id, 
+            {"type": "player_left", "player": player_identifier}
+        )
+        
+    except Exception as e:
+        print(f"WS Erreur inattendue pour {player_identifier}: {e}")
+
+
+@router.websocket("/ws/test")
+async def websocket_endpoint(
+    websocket: WebSocket,
+
+):
+    """
+    Gère la connexion WebSocket pour une partie spécifique (vérification de l'ID, enregistrement).
+    """
+    
+
+    params=websocket.query_params
+    game_id = params.get("game_id")
+    player_identifier = params.get("player_identifier")
+
+    if(not game_id or not player_identifier):
+        print("query string error")
+        await websocket.close()       
+    
+
+    # 2. Acceptation et Enregistrement de la Connexion
+    await websocket.accept()
+    
+    
+     # Initialisation de la liste pour ce game_id si elle n'existe pas
+    if game_id not in ACTIVE_CONNECTIONS:
+        ACTIVE_CONNECTIONS[game_id] = []
+    
+    # Enregistre la connexion
+    ACTIVE_CONNECTIONS[game_id].append(websocket)
+    print(f"WS Connexion établie: Joueur {player_identifier} pour {game_id}")
+    
+    try:
+        # 3. Notification de Connexion
+        await broadcast_message(
+            game_id, 
+            {"type": "player_joined", "player": player_identifier}
+        )
+
+        # 4. Boucle de Réception des Messages (Moteur de Jeu)
+        while True:
+            # Attend un message du client (doit être non-bloquant)
+            data = await websocket.receive_json()
+
+
             # --- Logique de Test (Écho) ---
 
             # Pour le test, on renvoie simplement ce qu'on reçoit à tous les joueurs

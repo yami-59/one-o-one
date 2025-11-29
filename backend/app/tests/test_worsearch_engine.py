@@ -1,6 +1,4 @@
-from app.models.schemas import WordSolution
 import pytest
-from app.games.wordsearch.wordsearch_generator import WordSearchGenerator
 from app.games.wordsearch.wordsearch_engine import WordSearchEngine
 from app.models.tables import *
 from app.models.schemas import *

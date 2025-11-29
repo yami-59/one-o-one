@@ -5,7 +5,7 @@ from redis.asyncio import Redis as AsyncRedis # Alias pour le client Redis async
 from app.models.schemas import WordSearchState,WordSolution # Le schéma d'état spécifique
 from app.models.tables import GameSession,User
 from sqlmodel import select
-
+from app.utils.enums import Status
 
 
 
@@ -48,28 +48,54 @@ class WordSearchEngine:
 
         
     @staticmethod
-    def reconstruct_word_from_coords (
+    def reconstruct_word (
             grid :List[List[str]],
             solution:WordSolution
             
     ) :
+        start_index,end_index=[solution.start_index,solution.end_index]
 
-        # 1. Calcul de la Longueur (L, C)
-        L1, C1 = solution.start_pos
-        L2, C2 = solution.end_pos
+        
+        if(start_index == end_index):
+            return grid[start_index['row']][end_index['col']]
+        
+
+
+        # 1. Calcul du Vecteur de Déplacement Total
+        deltaR = end_index['row'] - start_index['row']
+        deltaC = end_index['col'] - start_index['col']
+
+        absDeltaR=abs(deltaR)
+        absDeltaC=abs(deltaC)
+
+
+        
+        # --- CONTRÔLE DE LA COLINÉARITÉ (VÉRIFICATION CRITIQUE) ---
+        # La sélection est valide si :
+        # 1. Déplacement Horizontal (absDeltaR = 0)
+        # 2. OU Déplacement Vertical (absDeltaC = 0)
+        # 3. OU Déplacement Diagonal (absDeltaR = absDeltaC)
+
+
+        if (not(absDeltaR == 0 or absDeltaC == 0 or absDeltaR == absDeltaC)) :
+
+            raise ValueError("❌ SÉLECTION INVALIDE : Non-colinéaire (n'est ni H, V, ni D).")
+    
 
         # Calcule le nombre d'étapes (différence maximale entre les coordonnées)
-        num_steps = max(abs(L2 - L1), abs(C2 - C1))
+        steps = max(absDeltaR, absDeltaC)
 
-        dl, dc = solution.direction
+
+        dr = int(deltaR / abs(deltaR)) if deltaR != 0 else 0
+        dc = int(deltaC / abs(deltaC)) if deltaC != 0 else 0
     
         reconstructed_word = [] # Utiliser une liste pour une construction efficace
         
-        # 3. Itération sur chaque étape (0 à num_steps inclus)
+        # 3. Itération sur chaque étape (0 à steps inclus)
         # Le mot a (num_steps + 1) lettres
-        for i in range(num_steps + 1):
-            row = L1 + i * dl
-            col = C1 + i * dc
+        for i in range(steps + 1):
+            row = start_index['row'] + i * dr
+            col = start_index['col'] + i * dc
 
             # 4. Vérification des limites (même si direction est censé être valide)
             if not (0 <= row < len(grid) and 0 <= col < len(grid[0])):
@@ -100,7 +126,7 @@ class WordSearchEngine:
         # (Par exemple, un joueur sélectionne des lettres au hasard)
         
 
-        reconstructed_word = self.reconstruct_word_from_coords(
+        reconstructed_word = self.reconstruct_word(
             state.grid_data, 
             selected_obj
         )
@@ -163,8 +189,8 @@ async def finalize_game(self):
     try:
         final_state = await self._get_game_state()
     except Exception:
+        return {"status": Status.error, "detail": "État de jeu non trouvé dans Redis."}
         # Si Redis ne contient rien (partie abandonnée ou clé expirée), on s'arrête.
-        return {"status": "error", "detail": "État de jeu non trouvé dans Redis."}
         
     final_scores = final_state.realtime_score
     
@@ -225,7 +251,7 @@ async def finalize_game(self):
         await self.redis.delete(f"game:{self.game_id}")
         
         return {
-            "status": "finalized", 
+            "status": Status.finished, 
             "winner": winner_id, 
             "score_a": score_a, 
             "score_b": score_b,

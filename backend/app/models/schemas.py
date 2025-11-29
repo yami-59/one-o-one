@@ -30,11 +30,8 @@ class TokenResponse(SQLModel):
 class WordSolution(SQLModel):
     """Schéma de la solution d'un mot."""
     word: str
-    # 🎯 Type Pydantic clair: un tuple contenant deux tuples d'entiers
-    start_pos :Tuple
-    end_pos:Tuple
-
-    direction:Tuple
+    start_index :Dict[str,int]
+    end_index:Dict[str,int]
 
 
 

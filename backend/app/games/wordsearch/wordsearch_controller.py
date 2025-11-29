@@ -8,7 +8,12 @@ from app.models.schemas import WordSearchState
 from typing import List,Any,Dict
 from app.utils.enums import Status,GameName
 from app.models.schemas import WordSearchState,WordSolution # Le schéma d'état spécifique
+from app.models.tables import GameSession# Le schéma d'état spécifique
 import asyncio
+from sqlmodel import select
+
+
+
 class WordGame:
     """
     Contrôleur de haut niveau pour une session de jeu Mot-Mêlé.
@@ -20,7 +25,9 @@ class WordGame:
         # Composition : Initialisation des dépendances internes
         self.generator = WordSearchGenerator(word_list)
         self.engine = WordSearchEngine(game_id, db_session, redis_client)
-
+        
+        self.__game_id=game_id
+        self.__db_session=db_session
 
         self.timeout_task = None 
         self.GAME_DURATION_SECONDS = 180
@@ -29,24 +36,24 @@ class WordGame:
     async def _schedule_timeout(self):
         """Tâche d'arrière-plan pour attendre 3 minutes et terminer le jeu."""
         try:
-            print(f"⏳ Minuteur démarré pour la partie {self.game_id} ({self.GAME_DURATION_SECONDS}s).")
+            print(f"⏳ Minuteur démarré pour la partie {self.__game_id} ({self.GAME_DURATION_SECONDS}s).")
             
             # 1. Attend le temps imparti de manière non-bloquante
             await asyncio.sleep(self.GAME_DURATION_SECONDS)
             
             # 2. Déclenchement de la fin de partie
-            print(f"⌛ Temps écoulé pour la partie {self.game_id}. Finalisation...")
+            print(f"⌛ Temps écoulé pour la partie {self.__game_id}. Finalisation...")
             await self.engine.finalize_game() 
             
             # 3. Notifier les joueurs via Pub/Sub (simulé)
             await self.engine.redis.publish(
-                f"game_channel:{self.game_id}", 
+                f"game_channel:{self.__game_id}", 
                 '{"type": "timeout", "message": "Le temps est écoulé!"}'
             )
 
         except asyncio.CancelledError:
             # Gérer l'annulation si la partie se termine plus tôt (par abandon)
-            print(f"Minuteur annulé pour la partie {self.game_id}.")
+            print(f"Minuteur annulé pour la partie {self.__game_id}.")
         except Exception as e:
             print(f"Erreur fatale dans le minuteur du jeu : {e}")
 
@@ -68,6 +75,21 @@ class WordGame:
         
         # 3. Sauvegarde dans Redis (pour l'état actif)
         await self.engine._save_game_state(initial_state)
+
+
+
+        # 4. Sauvegarde dans Postgres (pour l'état actif)
+        game_session : GameSession = (await self.__db_session.exec(
+            select(GameSession).where(GameSession.game_id == self.__game_id)
+        )).first()
+
+        game_session.game_data=initial_state
+        game_session.status=Status.active
+
+        self.__db_session.add(game_session)
+        self.__db_session.commit()
+
+
         
         
             
@@ -75,7 +97,7 @@ class WordGame:
         # Crée la tâche d'arrière-plan pour la boucle d'événements
         self.timeout_task = asyncio.create_task(self._schedule_timeout())
 
-        return {"message":"started","timer":self.GAME_DURATION_SECONDS}
+        return {"status":Status.active,"timer":self.GAME_DURATION_SECONDS}
 
 
 

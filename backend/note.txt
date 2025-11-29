@@ -1,0 +1,93 @@
+Parfait. Ignorer la logique de validation et de mise à jour de l'état (Redis/DB) est la meilleure approche pour le moment. Nous allons nous concentrer uniquement sur la **diffusion immédiate** des coordonnées de la souris d'un joueur vers l'écran de l'adversaire via le WebSocket.
+
+Ceci est la logique de **"présence"** ou **"aperçu en temps réel"** pour le surlignage.
+
+-----
+
+## 🛠️ 1. Mise à Jour du Serveur WebSocket (`websocket.py`)
+
+Nous allons ajouter une condition pour intercepter les messages de type `"selection_update"` et les diffuser sans appeler le moteur de jeu.
+
+### Code dans `/backend/app/api/websocket.py`
+
+Modifiez la boucle `while True` dans votre fonction `websocket_endpoint` :
+
+```python
+# /backend/app/api/websocket.py (dans websocket_endpoint)
+
+# ... (Après l'étape 2. Acceptation et Enregistrement de la Connexion) ...
+
+try:
+    while True:
+        data = await websocket.receive_json()
+        
+        # 🎯 NOUVELLE LOGIQUE : Diffusion immédiate pour l'aperçu
+        if data.get("type") == "selection_update":
+            
+            # Message de diffusion incluant l'expéditeur et les coordonnées
+            message = {
+                "type": "remote_selection", 
+                "sender_id": player_identifier,
+                "start_index": data.get("start_index"),
+                "end_index": data.get("end_index")
+            }
+            
+            # Diffusion à tous les joueurs de la partie
+            await broadcast_message(game_id, message)
+            
+        elif data.get("type") == "validate_word":
+            # ⚠️ Ignorer la validation du moteur de jeu pour l'instant
+            print(f"ACTION SKIPPÉE : Validation du mot '{data.get('word')}'")
+            continue 
+
+        # ... (Reste des messages ou gestion des erreurs) ...
+
+except WebSocketDisconnect:
+    # ... (Logique de déconnexion) ...
+```
+
+-----
+
+## 2\. ⚛️ Logique Frontend (React)
+
+Côté React, vous devez :
+
+1.  Stocker l'état de la sélection de l'adversaire.
+2.  Modifier la fonction de dessin (`drawLine`) pour dessiner les sélections locales **et** distantes.
+
+### A. Nouvel État pour l'Adversaire
+
+Ajoutez un état pour stocker la sélection de l'adversaire dans votre composant de grille ou votre hook :
+
+```jsx
+// Dans WordGrid.jsx ou useCanvasDrawing.js
+const [opponentSelection, setOpponentSelection] = useState(null); // {sender_id, start_index, end_index}
+```
+
+### B. Mettre à Jour l'État (Réception WebSocket)
+
+Dans votre hook WebSocket ou votre composant, lorsque vous recevez un message de type `"remote_selection"`, vous mettez à jour l'état de l'adversaire :
+
+```javascript
+// Dans la fonction socket.onmessage du Frontend
+
+socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    
+    if (data.type === "remote_selection" && data.sender_id !== playerId) {
+        // Mettre à jour l'état si l'expéditeur n'est pas nous-mêmes
+        setOpponentSelection({
+            sender_id: data.sender_id,
+            start: data.start_index,
+            end: data.end_index
+        });
+    }
+    // ...
+};
+```
+
+### C. Le Dessin sur le Canvas
+
+Enfin, votre logique de dessin sur le Canvas doit être adaptée pour dessiner la ligne de l'adversaire en plus de la ligne locale (si elle existe).
+
+Le principe est que le Canvas devient l'interface pour **tous les dessins actifs**, qu'ils soient locaux ou distants. Vous aurez besoin d'une structure pour stocker plusieurs sélections actives (un tableau de sélections).
