@@ -4,6 +4,10 @@ from fastapi import APIRouter,status,HTTPException
 from app.models.tables import User
 from app.utils.auth import generate_guest_identifier,create_access_token,get_current_player_id,TokenDep
 from app.models.schemas import TokenResponse
+
+
+
+
 router = APIRouter()
 
 
@@ -33,7 +37,7 @@ async def login_guest(session: SessionDep):
         )
 
     # 3. Création du Jeton JWT
-    access_token = create_access_token(new_identifier )
+    access_token = create_access_token(new_identifier)
 
     # 4. Retourner le jeton et l'identifiant au client
     return TokenResponse(

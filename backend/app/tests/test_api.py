@@ -137,9 +137,7 @@ async def test_websocket_broadcast(client, db_session):
 
 
     token_a = create_access_token(player_a_id, timedelta(minutes=30))
-    header_a = {"Authorization": f"Bearer {token_a}"}
     token_b = create_access_token(player_b_id, timedelta(minutes=30))
-    header_b = {"Authorization": f"Bearer {token_b}"}
     
 
     # Créer et enregistrer la GameSession
@@ -160,10 +158,11 @@ async def test_websocket_broadcast(client, db_session):
     
     # --- 2. CONNEXION ET CONSOMMATION DES MESSAGES DE SETUP ---
     
-    ws_url = f"api/v1/ws/game/{game_uuid}"
+    ws_url_a = f"api/v1/ws/game/{game_uuid}?token={token_a}"
+    ws_url_b = f"api/v1/ws/game/{game_uuid}?token={token_b}"
 
-    with client.websocket_connect(f"{ws_url}",headers=header_a) as websocket_a, \
-         client.websocket_connect(f"{ws_url}",headers=header_b) as websocket_b:
+    with client.websocket_connect(f"{ws_url_a}") as websocket_a, \
+         client.websocket_connect(f"{ws_url_b}") as websocket_b:
         
         # Amélioration: Consommer tous les messages "player_joined" envoyés
         # par le broadcast lors des deux connexions, sans supposer qu'il y en a exactement 4.

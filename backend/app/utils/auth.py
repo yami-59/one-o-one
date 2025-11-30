@@ -13,7 +13,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  #  valable 7 jours
 
 
 # La dépendance pour extraire le JWT des headers de la requete http
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/guest/log")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/guest/login")
 
 # La dépendance pour extraire le JWT des headers de la connexion WS
 # C'est l'équivalent de OAuth2PasswordBearer pour les WebSockets
@@ -22,27 +22,12 @@ def get_websocket_token(websocket: WebSocket) -> str:
     Extrait le jeton Bearer du header 'Authorization' de la connexion WebSocket.
     """
     # 1. Tente de récupérer le header Authorization
-    auth_header = websocket.headers.get("Authorization")
+    token = websocket.query_params.get("token")
     
-    if not auth_header:
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,  # 403 Forbidden car le jeton est manquant
             detail="Jeton d'autorisation manquant dans les en-têtes WebSocket."
-        )
-
-    # 2. Vérifie le format "Bearer <token>"
-    scheme, _, token = auth_header.partition(" ")
-    
-    if scheme.lower() != "bearer":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Le schéma d'autorisation doit être Bearer."
-        )
-        
-    if not token:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Jeton Bearer invalide ou vide."
         )
 
     return token
