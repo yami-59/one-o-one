@@ -1,5 +1,5 @@
-import * as c from './constants'
-import { type WordProps } from './types';
+import {CELL_SIZE,RAINBOW_COLORS} from '../constants/wordsearchConstants'
+import { type WordConstructProps,type Position, type GridIndexes } from '../types/wordsearchTypes';
 
 
 // Fonction utilitaire à placer dans votre composant WordGrid
@@ -11,29 +11,37 @@ import { type WordProps } from './types';
  * @param {number} cellSize - Taille d'une cellule en pixels (ex: 30).
  * @returns {{row: number, col: number}} Les indices Ligne/Colonne.
  */
-export const  getGridIndex  =  (x : number, y:number) => {
+export const  getGridIndex  =  (pos:Position) : GridIndexes  => {
     return {
-        col: Math.floor(x / c.CELL_SIZE),
-        row: Math.floor(y / c.CELL_SIZE)
-    };
+        start_index:{
+            col: Math.floor(pos.start_point.x / CELL_SIZE),
+            row: Math.floor(pos.start_point.y / CELL_SIZE)
+        },
+        end_index:{
+            col: Math.floor(pos.end_point.x / CELL_SIZE),
+            row: Math.floor(pos.end_point.y / CELL_SIZE)
+        }
+    }
 };
 
 /**
  * Reconstruit le mot à partir de la grille en utilisant les indices de début et de fin.
  * Inclut une vérification stricte de colinéarité (H, V, ou D).
  */
-export const getWord = ({grid, start,end}:WordProps) : string | null => { // Type de retour ajusté à string | null
+export const construct_word = ({grid,indexes}:WordConstructProps) : string | null => { // Type de retour ajusté à string | null
     let word = "";
 
+
+    const {start_index,end_index} = indexes
     // Gérer le cas du clic simple (sélection d'une seule cellule)
-    if(start === end ) {
+    if(start_index === end_index ) {
         // En mode jeu, un clic simple ne doit pas être un mot valide (longueur > 1)
-        return grid[start.row][start.row]; // Retourne juste la lettre, mais le backend devrait la rejeter.
+        return grid[start_index.row][end_index.row]; // Retourne juste la lettre, mais le backend devrait la rejeter.
     }
     
     // 1. Calcul du Vecteur de Déplacement Total
-    const deltaR = end.row - start.row;
-    const deltaC = end.col - start.col;
+    const deltaR = end_index.row - start_index.row;
+    const deltaC = end_index.col - start_index.col;
     
     const absDeltaR = Math.abs(deltaR);
     const absDeltaC = Math.abs(deltaC);
@@ -52,7 +60,7 @@ export const getWord = ({grid, start,end}:WordProps) : string | null => { // Typ
     
     // --- DÉBUT DU DÉBOGAGE ---
     console.log("--- DÉBUT RECONSTRUCTION DU MOT ---");
-    console.log(`1. Coords Début: [${start.row}, ${start.col}], Coords Fin: [${end.row}, ${end.col}]`);
+    console.log(`1. Coords Début: [${start_index.row}, ${start_index.col}], Coords Fin: [${end_index.row}, ${end_index.col}]`);
     console.log(`2. Déplacement Total (dR, dC): [${deltaR}, ${deltaC}]`);
 
 
@@ -68,8 +76,8 @@ export const getWord = ({grid, start,end}:WordProps) : string | null => { // Typ
 
     // 4. Reconstruction du Mot
     for (let i = 0; i <= steps; i++) {
-        const r = start.row + i * dR;
-        const c = start.col + i * dC;
+        const r = start_index.row + i * dR;
+        const c = start_index.col + i * dC;
         
         // Afficher la position actuelle et la lettre lue
         console.log(`    - Étape ${i}: [${r}, ${c}] -> Lettre: ${grid[r][c]}`);
@@ -88,8 +96,8 @@ export const getWord = ({grid, start,end}:WordProps) : string | null => { // Typ
  * @returns {string} Code couleur Hex (ex: 'rgba(255, 0, 0, 0.5)').
  */
 export const getRandomRainbowColor = () => {
-    const randomIndex = Math.floor(Math.random() * c.RAINBOW_COLORS.length);
-    return c.RAINBOW_COLORS[randomIndex];
+    const randomIndex = Math.floor(Math.random() * RAINBOW_COLORS.length);
+    return RAINBOW_COLORS[randomIndex];
 };
 
 
