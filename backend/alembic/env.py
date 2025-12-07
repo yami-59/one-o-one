@@ -1,14 +1,16 @@
-from logging.config import fileConfig
-from sqlmodel import SQLModel
-from alembic import context
-from app.models.tables import *
-from app.models.schemas import *
-from dotenv import load_dotenv # 🎯 Importez la fonction de chargement
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.pool import NullPool # Importez le Pool si vous voulez l'utiliser
+from logging.config import fileConfig
 
-load_dotenv( '.env')
+from dotenv import load_dotenv  # 🎯 Importez la fonction de chargement
+from sqlalchemy import create_engine
+from sqlalchemy.pool import NullPool  # Importez le Pool si vous voulez l'utiliser
+from sqlmodel import SQLModel
+
+from alembic import context
+from app.models.schemas import *
+from app.models.tables import *
+
+load_dotenv(".env.local")
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
@@ -45,9 +47,11 @@ def run_migrations_offline() -> None:
     url = os.environ.get("DATABASE_URL")
 
     if url is None:
-        raise Exception("DATABASE_URL est manquante. Impossible de se connecter à la DB.")
-    
-    url=url.replace("+asyncpg", "+psycopg2")
+        raise Exception(
+            "DATABASE_URL est manquante. Impossible de se connecter à la DB."
+        )
+
+    url = url.replace("+asyncpg", "+psycopg2")
 
     context.configure(
         url=url,
@@ -71,21 +75,21 @@ def run_migrations_online() -> None:
     url = os.environ.get("DATABASE_URL")
 
     if url is None:
-        raise Exception("DATABASE_URL est manquante. Impossible de se connecter à la DB.")
-    
-    url=url.replace("+asyncpg", "+psycopg2")
-    
+        raise Exception(
+            "DATABASE_URL est manquante. Impossible de se connecter à la DB."
+        )
+
+    url = url.replace("+asyncpg", "+psycopg2")
+
     connectable = create_engine(
         url,
-        future=True,             # Style SQLAlchemy 2.0
-        poolclass=NullPool,      # Utilise le NullPool
+        future=True,  # Style SQLAlchemy 2.0
+        poolclass=NullPool,  # Utilise le NullPool
     )
 
     with connectable.connect() as connection:
         context.configure(
-            connection=connection,
-            url=url,
-            target_metadata=target_metadata
+            connection=connection, url=url, target_metadata=target_metadata
         )
 
         with context.begin_transaction():

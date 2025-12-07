@@ -37,6 +37,16 @@ alembic
 # Pour la gestion des sessions 
 jwt
 
+# Formatage strict du code Python (conformité au PEP 8)
+black
+
+# Tri automatique et organisation des imports
+isort
+
+# Outil de hooks Git (optionnel, mais très utile pour exécuter Black avant le commit)
+ pre-commit
+
+
 # autres 
 codesum
 python-jose

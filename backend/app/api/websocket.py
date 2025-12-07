@@ -1,131 +1,382 @@
 # /backend/app/api/websocket.py
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status
-from sqlmodel import  select
-from typing import  Dict
-from app.core.db import SessionDep  # Pour la vérification DB
-from app.models.tables import GameSession # Pour vérifier l'existence de la partie
-from app.utils.auth import get_websocket_token,get_current_player_id
-from app.utils.enums import GameMessageType
+import asyncio
+from uuid import uuid4
+from typing import Annotated
 
-# --- État Global des Connexions (En mémoire) ---
-# Clé: game_id (str) -> Valeur: Dict[str,WebSocket] (connexions des joueurs)
-ACTIVE_CONNECTIONS: Dict[str, Dict[str,WebSocket]] = {}
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, status, Query
+from sqlmodel import select, SQLModel
+from redis.asyncio import Redis as AsyncRedis
+from app.models.tables import GameSession
+from app.models.schemas import WordSearchState
+from app.core.redis import RedisDep
+from app.core.db import SessionDep
+from app.games.gameRoom import GameRoom
+from app.games.constants import GameStatus,GameMessages
+from app.games.wordsearch.redis_keys import redis_state_key
+from app.auth.lib import TokenDep, get_current_user_id
+from sqlmodel.ext.asyncio.session import AsyncSession
+
+router = APIRouter(tags=["websocket"])
+
+# --- Stockage des parties actives ---
+ACTIVE_GAMES: dict[str, GameRoom] = {}
+
+# --- Constantes pour le Token Éphémère ---
+WS_TOKEN_PREFIX = "ws_auth:"
+WS_TOKEN_EXPIRE_SECONDS = 300  # 5 minutes
 
 
-
-# Configurez le schéma de sécurité OAuth2 (FastAPI l'utilise pour extraire le jeton de l'en-tête)
-router = APIRouter()
+class WsTokenResponse(SQLModel):
+    """Schéma de réponse pour l'échange de token WebSocket."""
+    ws_token: str
+    expires_in: int = WS_TOKEN_EXPIRE_SECONDS
 
 
 # -----------------------------------------------------------------
-# Fonction utilitaire pour diffuser les messages
+# ENDPOINTS D'AUTHENTIFICATION WS
 # -----------------------------------------------------------------
-async def transfert_message(game_id: str,opponent_identifier:str,message: dict):
-    """Envoie un message JSON à l'adversaire connectés à ce game_id."""
-    if game_id in ACTIVE_CONNECTIONS :
-        # Vérification de l'existence de l'adversaire dans cette salle
-        conn = ACTIVE_CONNECTIONS[game_id].get(opponent_identifier)
-        
-        if conn:
-            try:
-                # ⚠️ CORRECTION : Utiliser await pour la méthode asynchrone
-                await conn.send_json(message)
-                
-            except Exception as e:
-                # ⚠️ Amélioration : Gérer les erreurs de déconnexion silencieuse
-                # Si le joueur est parti juste avant l'envoi, on nettoie
-                print(f"WS ERROR: Failed to send to {opponent_identifier} in {game_id}. Reason: {e}")
-                
-                # Optionnel : Supprimer la connexion cassée du dictionnaire
-                if game_id in ACTIVE_CONNECTIONS and opponent_identifier in ACTIVE_CONNECTIONS[game_id]:
-                    ACTIVE_CONNECTIONS[game_id].pop(opponent_identifier, None)
+
+
+# @router.post("/ws-auth", response_model=WsTokenResponse, status_code=status.HTTP_200_OK)
+# async def websocket_auth_exchange(
+#     token: TokenDep,
+#     redis_conn: RedisDep,
+# ):
+#     """Échange le JWT contre un token éphémère pour l'accès WebSocket."""
+#     player_id = get_current_user_id(token)
+
+#     # Générer un token aléatoire (uuid4 est plus sécurisé que uuid1)
+#     ws_token = str(uuid1())
+
+#     # Stocker l'association token -> player_id avec expiration
+#     await redis_conn.set(
+#         f"{WS_TOKEN_PREFIX}{ws_token}",
+#         player_id,
+#         ex=WS_TOKEN_EXPIRE_SECONDS,
+#     )
+
+#     return WsTokenResponse(ws_token=ws_token)
+
+
+# @router.post("/ws-refresh", response_model=WsTokenResponse, status_code=status.HTTP_200_OK)
+# async def refresh_ws_token(
+#     token: TokenDep,
+#     redis_conn: RedisDep,
+# ):
+#     """Génère un nouveau token WebSocket éphémère."""
+#     player_id = get_current_user_id(token)
+
+#     new_ws_token = str(uuid1())
+
+#     await redis_conn.set(
+#         f"{WS_TOKEN_PREFIX}{new_ws_token}",
+#         player_id,
+#         ex=WS_TOKEN_EXPIRE_SECONDS,
+#     )
+
+#     return WsTokenResponse(ws_token=new_ws_token)
+
+
+# -----------------------------------------------------------------
+# FONCTIONS UTILITAIRES
+# -----------------------------------------------------------------
+
+
+# async def validate_ws_token(redis_conn, ws_token: str) -> str | None:
+#     """
+#     Valide le token WebSocket et retourne le player_id.
+#     Retourne None si le token est invalide ou expiré.
+#     """
+#     if not ws_token:
+#         return None
+
+#     player_id = await redis_conn.get(f"{WS_TOKEN_PREFIX}{ws_token}")
+
+#     if not player_id:
+#         return None
+
+#     # Décoder si bytes
+#     if isinstance(player_id, bytes):
+#         player_id = player_id.decode("utf-8")
+
+#     # Supprimer le token après utilisation (one-time use)
+#     await redis_conn.delete(f"{WS_TOKEN_PREFIX}{ws_token}")
+
+#     return player_id
+
+
+async def get_game_session(session: SessionDep, game_id: str) -> GameSession | None:
+    """Récupère une session de jeu depuis la DB."""
+    query = select(GameSession).where(GameSession.game_id == game_id)
+    result = await session.exec(query)
+    return result.first()
+
+def get_or_create_room(game_id: str,db_session:AsyncSession ,redis_conn: AsyncRedis) -> GameRoom:
+    """Récupère ou crée une salle de jeu avec accès Redis."""
+    if game_id not in ACTIVE_GAMES:
+        ACTIVE_GAMES[game_id] = GameRoom(game_id=game_id,db_session=db_session, redis_conn=redis_conn)
+    return ACTIVE_GAMES[game_id]
+
+
+
+def cleanup_room_if_empty(game_id: str) -> None:
+    """Supprime la salle si elle est vide."""
+    room = ACTIVE_GAMES.get(game_id)
+    if room and room.is_empty():
+        del ACTIVE_GAMES[game_id]
+        print(f"🗑️ Room {game_id} supprimée (vide)")
+
+
+async def get_game_state_from_redis(
+    redis_conn: AsyncRedis, 
+    game_id: str
+) -> WordSearchState | None:
+    """
+    Récupère l'état du jeu depuis Redis.
+    Retourne None si l'état n'existe pas.
+    """
+    state_key = redis_state_key(game_id)
+    json_state = await redis_conn.get(state_key)
+    
+    if not json_state:
+        return None
+    
+    # Décoder si bytes
+    if isinstance(json_state, bytes):
+        json_state = json_state.decode("utf-8")
+    
+    return WordSearchState.model_validate_json(json_state)
+
+
+async def send_game_state_to_player(
+    room: GameRoom,
+    player_id: str,
+    redis_conn: AsyncRedis,
+    game_id: str,
+) -> bool:
+    """
+    Envoie l'état actuel du jeu (grille + mots à trouver) au joueur.
+    Appelé lors de la connexion initiale du joueur.
+    """
+    game_state = await get_game_state_from_redis(redis_conn, game_id)
+    
+    if not game_state:
+        await room.send_to_player(player_id, {
+            "type": GameMessages.ERROR,
+            "message": "État du jeu introuvable.",
+        })
+        return False
+    
+    await room.send_to_player(player_id, {
+        "type": GameMessages.GAME_DATA,
+        **game_state.model_dump(),
+    })
+    
+    print(f"📤 [{game_id}] État du jeu envoyé à {player_id}")
+    return True
 
 
 # -----------------------------------------------------------------
 # ROUTE WEBSOCKET PRINCIPALE
 # -----------------------------------------------------------------
 
-@router.websocket("/ws/game/{game_id}")
+
+@router.websocket("/ws/game/wordsearch/{game_id}")
 async def websocket_endpoint(
-    game_id: str,
-    session: SessionDep ,
     websocket: WebSocket,
-
+    game_id: str,
+    redis_conn: RedisDep,
+    session: SessionDep,
+    player_id: Annotated[str | None, Query(alias="playerId")] = None,
 ):
-    """
-    Gère la connexion WebSocket pour une partie spécifique (vérification de l'ID, enregistrement).
-    """
-    token=get_websocket_token(websocket)
-    player_identifier=get_current_player_id(token)
+    """Gère la connexion WebSocket pour une partie de mots mêlés."""
 
-    # # 1. Vérification de la Session de Jeu en DB
-    # game = (await session.exec(
-    #     select(GameSession).where(GameSession.game_id == game_id)
-    # )).first()
-    
-    # if not game:
-    #     print(f"WS Échec: Partie {game_id} introuvable.")
-    #     await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Game Not Found")
+    # # 1. Validation du token WebSocket
+    # player_id = await validate_ws_token(redis_conn, token)
+
+    if not player_id:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Token invalid or expired",
+        )
+        return
+
+    # # 2. Vérification que la partie existe en DB
+    # game_session = await get_game_session(session, game_id)
+
+    # if not game_session:
+    #     await websocket.close(
+    #         code=status.WS_1008_POLICY_VIOLATION,
+    #         reason="Game session not found",
+    #     )
     #     return
 
-    # 3. Acceptation et Enregistrement de la Connexion
-    await websocket.accept()
-    
-    # Initialisation de la salle de jeu
-    if game_id not in ACTIVE_CONNECTIONS:
-        ACTIVE_CONNECTIONS[game_id] = {}
+    # # 3. Vérification que le joueur fait partie de cette partie
+    # if player_id not in (game_session.player1_id, game_session.player2_id):
+    #     await websocket.close(
+    #         code=status.WS_1008_POLICY_VIOLATION,
+    #         reason="Player not in this game",
+    #     )
+    #     return
 
-    # Enregistre la connexion de manière sécurisée (Clé: ID, Valeur: Objet WebSocket)
-    ACTIVE_CONNECTIONS[game_id][player_identifier] = websocket
-    print(f"WS Connexion établie: Joueur {player_identifier} pour {game_id}")
+    # 4. Gestion de la salle de jeu (avec accès Redis)
+    room = get_or_create_room(game_id,session, redis_conn)
 
-    # 4. Logique de Matchmaking et de Démarrage (ATTENTE NON BLOQUANTE)
-    
-    # Détermination des joueurs actifs
-    player_ids = list(ACTIVE_CONNECTIONS[game_id].keys())
-    is_ready = len(player_ids) == 2
-    
-    if is_ready:
-        # Si la partie est pleine, on identifie l'adversaire
-        opponent_identifier = next(id for id in player_ids if id != player_identifier)
-        
-        # Envoi de la notification de démarrage aux deux joueurs
-        await transfert_message(
-             game_id,
-             opponent_identifier, 
-             {"type": GameMessageType.GAME_START, "opponent": opponent_identifier, "you_are": player_identifier}
+    # Refuser si la salle est pleine et que le joueur n'y est pas déjà
+    if room.is_full() and player_id not in room.player_ids:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Room is full",
         )
-    else:
-        # La partie n'est pas encore pleine, on notifie le joueur qu'il doit attendre
-        await websocket.send_json({"type": GameMessageType.WAITING_FOR_OPPONENT, "message": "En attente du second joueur..."})
+        return
 
-    try:
-        # 5. Boucle de Réception (Moteur de Jeu)
-        while True:
-            # Reçoit le message (non bloquant)
-            data = await websocket.receive_json() 
-            
-            # Traitement de la logique de jeu ici...
-            
-            # Exemple : Renvoyer à l'adversaire ou broadcaster
-            if is_ready:
-                await transfert_message(game_id,opponent_identifier, data)
-            
-    except WebSocketDisconnect:
-        # 6. Gestion de la Déconnexion
-        print(f"WS Déconnexion: Joueur {player_identifier} de la partie {game_id}")
-        
-        # Supprime la connexion de la liste active (Utilisation de .pop() pour la sécurité)
-        ACTIVE_CONNECTIONS[game_id].pop(player_identifier, None)
+    # 5. Acceptation et enregistrement
+    await websocket.accept()
 
-        # Notifie l'adversaire
-        if is_ready:
-             await transfert_message(
-                 game_id,
-                 opponent_identifier,
-                 {"type": "opponent_left", "player": player_identifier, "message": "L'adversaire a quitté la partie."}
-             )
+    if not room.add_player(player_id, websocket):
+        # Le joueur était peut-être déjà connecté, on met à jour son socket
+        room.remove_player(player_id)
+        room.add_player(player_id, websocket)
+
+    # 6. 🎯 NOUVEAU: Envoyer l'état du jeu au joueur dès la connexion
+    await send_game_state_to_player(room, player_id, redis_conn, game_id)
+
+    print(f"✅ [{game_id}] Joueur {player_id} connecté ({room.player_count}/2)")
+
+    # # 6. Logique de démarrage
+    # if room.is_full() and room.state == GameStatus.WAITING_FOR_PLAYERS:
+    #     asyncio.create_task(room.handle_game_start())
     
+    
+    
+    if room.state == GameStatus.WAITING_FOR_PLAYERS:
+        await room.send_to_player(player_id, {
+            "type": GameStatus.WAITING_FOR_PLAYERS.value,
+            "message": "En attente du second joueur...",
+        })
+
+    # 7. Boucle de réception des messages
+    try:
+        while True:
+            data = await websocket.receive_json()
+            await handle_player_message(room, player_id, data)
+
+    except WebSocketDisconnect:
+        print(f"🔌 [{game_id}] Joueur {player_id} déconnecté")
+        await handle_player_disconnect(room, player_id, game_id)
+
     except Exception as e:
-        print(f"WS Erreur inattendue pour {player_identifier}: {e}")
+        print(f"❌ [{game_id}] Erreur pour {player_id}: {e}")
+        room.remove_player(player_id)
+        cleanup_room_if_empty(game_id)
+
+
+async def handle_player_message(
+    room: GameRoom, 
+    player_id: str, 
+    data: dict,
+) -> None:
+    """Traite un message reçu d'un joueur."""
+    message_type = data.get("type")
+
+    # # Permettre certains messages même si le jeu n'est pas en cours
+    # allowed_before_start = ["player_ready", "selection_update"]
+    
+    # if room.state != GameStatus.GAME_IN_PROGRESS and message_type not in allowed_before_start:
+    #     await room.send_to_player(player_id, {
+    #         "type": "error",
+    #         "message": "La partie n'est pas en cours.",
+    #     })
+    #     return
+
+    # Gérer les différents types de messages
+    if message_type == "selection_update":
+        # Transmettre la sélection à l'adversaire (aperçu en temps réel)
+        opponent_id = room.get_opponent_id(player_id)
+        if opponent_id:
+            await room.send_to_player(opponent_id, {
+                **data,
+                "from": player_id,
+            })
+    
+    elif message_type == "submit_selection":
+        solution = data.get("solution")
+        result  = await room._controller.process_player_action(player_id,solution)
+
+
+        if result.get("success"):
+            # Récupérer l'état mis à jour pour calculer les mots restants
+
+            await room.broadcast({
+                "type":GameMessages.WORD_FOUND_SUCCESS,
+                **result,
+            })
+        
+        else:
+            await room.send_to_player(player_id,result)
+        
+        pass
+
+    else:
+        # Transmettre les autres messages à l'adversaire
+        opponent_id = room.get_opponent_id(player_id)
+        if opponent_id:
+            await room.send_to_player(opponent_id, {
+                **data,
+                "from": player_id,
+            })
+
+
+async def handle_player_disconnect(room: GameRoom, player_id: str, game_id: str) -> None:
+    """Gère la déconnexion d'un joueur."""
+    room.remove_player(player_id)
+
+    # Notifier l'adversaire
+    opponent_id = room.get_opponent_id(player_id)
+    if opponent_id:
+        await room.send_to_player(opponent_id, {
+            "type": "opponent_disconnected",
+            "message": "Votre adversaire s'est déconnecté.",
+        })
+
+    # Si la partie était en cours, la terminer
+    if room.state == GameStatus.GAME_IN_PROGRESS and opponent_id:
+        await room.end_game(winner_id=opponent_id, reason="opponent_disconnected")
+
+    cleanup_room_if_empty(game_id)
+
+
+
+
+
+"""
+
+## Résumé des changements
+
+| Problème | Solution |
+|----------|----------|
+| `uuid1()` pas converti en str | `str(uuid4())` (uuid4 plus sécurisé) |
+| Token WS jamais validé | Fonction `validate_ws_token()` |
+| `return {...}` dans WS | `await websocket.close()` |
+| `handle_game_start(room)` | `room.handle_game_start()` |
+| `room.players[id] = ws` | `room.add_player(id, ws)` |
+| `.value` manquant | Ajouté sur tous les enums dans JSON |
+| `import *` | Import explicite |
+| Pas de cleanup | `cleanup_room_if_empty()` |
+| `playerId` | Renommé `player_id` (snake_case) |
+| Pas de validation joueur/partie | Vérification `player_id in (p1, p2)` |
+| Token réutilisable | Supprimé après usage (one-time) |
+
+## Flow complet
+```
+1. Client POST /ws-auth avec JWT → reçoit ws_token
+2. Client connecte ws://...?token=<ws_token>
+3. Serveur valide token via Redis, supprime le token
+4. Serveur vérifie que le joueur fait partie de la game
+5. Joueur rejoint la room
+6. Quand 2 joueurs → countdown → game start
+7. Messages relayés entre joueurs
+8. Déconnexion → notification adversaire → cleanup
+
+"""

@@ -1,79 +1,107 @@
-from typing import Dict, Any
-from sqlmodel import SQLModel 
-from sqlmodel import SQLModel ,Field
-from typing import Dict, List, Any, Tuple
+from typing import Any, Dict, List, Tuple
 
-
-
-
-class PlayerIdentifier(SQLModel):
-    identifier: str
+from sqlmodel import Field, SQLModel
+from sqlalchemy.dialects.postgresql import JSON
 
 
 class UserStats(SQLModel):
-    victories:int
-    defeats:int
-
-# Schéma de réponse pour la connexion
-class TokenResponse(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
-    player_identifier: str
-
-# Schéma de réponse pour la connexion
-class TokenResponse(SQLModel):
-    access_token: str
-    token_type: str = "bearer"
-    player_identifier: str
-
-
-class WordSolution(SQLModel):
-    """Schéma de la solution d'un mot."""
-    word: str
-    start_index :Dict[str,int]
-    end_index:Dict[str,int]
-
-
+    victories: int
+    defeats: int
 
 
 class GameStateBase(SQLModel):
     """
     Classe parent agnostique au tour. Définit l'état commun à tous les jeux.
-    """    
+    """
+
     # Score en temps réel (toujours nécessaire)
-    realtime_score: Dict[str, int] = {} # {identifier_joueur: score_actuel}
-    
+    realtime_score: Dict[str, int] = {}  # {player_id: score_actuel}
+
     # Données Spécifiques au Joueur (ex: prêt à jouer, vies restantes, etc.)
-    player_data: Dict[str, Any] = {} # {identifier_joueur: {statut_specifique}}
-
-   
-        
-        
-
-
+    player_data: Dict[str, Any] = {}  # {player_id: {statut_specifique}}
 
 
 # -----------------------------------------------------------------
 # CLASSE ENFANT : MOT-MÊLÉ
 # -----------------------------------------------------------------
+
+class Index(SQLModel):
+    row: int
+    col: int
+
+
+class WordSolution(SQLModel):
+    """Schéma de la solution d'un mot."""
+
+    word: str
+    start_index: Index
+    end_index: Index
+
+
+
+# Nouveau Modèle : Stockage Sécurisé
+class WordSearchSolutionData(SQLModel):
+    """Contient toutes les coordonnées de la solution (DONNÉE PRIVÉE)."""
+    
+    # Stocke le mot et ses coordonnées de placement (start/end)
+    solutions: List[WordSolution] = Field(default_factory=JSON)
+    
+    # ⚠️ Ce modèle n'est JAMAIS envoyé au frontend.
+
+
+
 class WordSearchState(GameStateBase):
-    """
-    État spécifique au jeu de Mot-Mêlé.
-    """
+    theme: str
+    grid_data: List[List[str]] = Field(default_factory=list)
+    
+    # 🎯 CORRECTION : Remplace solution_words par les mots à trouver (strings)
+    # Le frontend a juste besoin de la liste des chaînes pour l'affichage (liste latérale).
+    words_to_find: List[str] = Field(default_factory=list) 
+    
+    words_found: Dict[str, List[WordSolution]] = Field(default_factory=dict)
 
-    # 1. Structure de la Grille
-    # La grille 10*10 avec les lettres à afficher
+
+# -----------------------------------------------------------------
+# SCHÉMAS DE MESSAGES WEBSOCKET
+# -----------------------------------------------------------------
+
+class GameStateMessage(SQLModel):
+    """Message envoyé au client avec l'état du jeu."""
+    type: str = "game_state"
+    game_id: str
+    theme: str
     grid_data: List[List[str]]
-    
-    # 2. La Solution (la vérité de ce qui est caché)
-    # Liste des mots que les joueurs doivent trouver
-    solution_words: List[WordSolution] 
-    
-    # 3. Le Suivi de la Progression
-    # Stocke les mots déjà trouvés (pour empêcher la double validation)
-    words_found: Dict[str, List[str]] = {}
-    # Format: {player_identifier: [word1, word2, ...]}
-
-    
+    words_to_find: List[str]
+    words_found: Dict[str, List[str]]
+    realtime_score: Dict[str, int]
 
 
+
+class SelectionUpdate(SQLModel):
+    """Message de mise à jour de sélection (aperçu en temps réel)."""
+    type: str = "selection_update"
+    position: Dict[str, Any]  # {start_point: {x, y}, end_point: {x, y}}
+    color: str
+
+
+class SubmitSelection(SQLModel):
+    """Message de soumission d'un mot."""
+    type: str = "submit_selection"
+    word: str
+    start_index: Index
+    end_index: Index
+
+
+class WordFoundResponse(SQLModel):
+    """Réponse quand un mot est trouvé."""
+    type: str = "word_found_success"
+    word: str
+    player_id: str
+    score_update: int
+    new_score: int
+
+
+class ScoreUpdate(SQLModel):
+    """Mise à jour des scores."""
+    type: str = "score_update"
+    scores: Dict[str, int]

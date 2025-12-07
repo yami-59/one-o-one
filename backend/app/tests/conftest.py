@@ -1,130 +1,222 @@
 # /backend/tests/conftest.py
+import uuid
+from typing import AsyncGenerator, Generator, List
+import contextlib
+
 import pytest
 import pytest_asyncio
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
+from httpx import AsyncClient, ASGITransport
+from redis.asyncio import Redis as AsyncRedis
+from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel
 from sqlmodel.ext.asyncio.session import AsyncSession
-from typing import AsyncGenerator,Generator
-from app.main import app 
+
 from app.core.db import get_session
-from sqlalchemy.ext.asyncio import create_async_engine
-from app.models.schemas import *
-from app.models.tables import *
-from app.utils.auth import *
+from app.core.redis import redis_generator
 from app.games.wordsearch.wordsearch_generator import WordSearchGenerator
-from app.games.wordsearch.wordsearch_engine import WordSearchEngine
-import uuid
-from redis.asyncio import Redis as AsyncRedis
-from app.utils.enums import GameName
+from app.auth.lib import create_access_token
+from app.main import app
+from app.models.tables import User, GameSession, WordList
 
 
+# ============================================================================
+# 🔥 OVERRIDE DU LIFESPAN POUR EMPÊCHER LE MATCHMAKER DE TOURNER EN TEST
+# ============================================================================
+@contextlib.asynccontextmanager
+async def fake_lifespan(app: FastAPI):
+    """
+    Empêche le lancement du consumer matchmaking et de Redis
+    pendant les tests.
+    """
+    yield
+
+# On remplace le lifespan d'origine pour TOUS les tests
+app.router.lifespan_context = fake_lifespan
 
 
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
 
-# --- 1. MOTEUR ET SESSION DE TEST ---
+SQLITE_TEST_URL = "sqlite+aiosqlite://"
+REDIS_TEST_URL = "redis://localhost:6379/15"
 
-# Utiliser SQLite en mémoire pour les tests. Le 'sqlite+aiosqlite:///' crée une DB en mémoire.
-sqlite_url = "sqlite+aiosqlite://"
-engine_test = create_async_engine(sqlite_url, echo=False, future=True)
+engine_test = create_async_engine(SQLITE_TEST_URL, echo=False, future=True)
 
 
 @pytest.fixture(scope="session")
 def anyio_backend():
-    return 'asyncio'
-
-async def get_session_test() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Dépendance de session asynchrone pour l'environnement de test.
-    """
-    async with AsyncSession(engine_test) as session:
-        yield session
+    return "asyncio"
 
 
+# ============================================================================
+# DATABASE
+# ============================================================================
+
+@pytest_asyncio.fixture(scope="session", autouse=True)
+async def setup_database():
+    async with engine_test.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    yield
+    async with engine_test.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
 
 
-# --- 1. FIXTURE DE LA CONNEXION A LA DB ---
-@pytest_asyncio.fixture(scope="function") # Scope function pour l'isolation des tests DB
+@pytest_asyncio.fixture(scope="function")
 async def db_session() -> AsyncGenerator[AsyncSession, None]:
-    """
-    Exécute le générateur de session de test pour obtenir l'objet AsyncSession actif.
-    """
-    # 🎯 Exécution et nettoyage du générateur via async for
-    async for session in get_session_test():
+    async with AsyncSession(engine_test, expire_on_commit=False) as session:
         yield session
-
-        # La transaction est annulée après le test pour annuler toutes les écritures.
         await session.rollback()
 
 
-# --- 2. FIXTURE DE SETUP DE LA DB ---
+async def override_get_session() -> AsyncGenerator[AsyncSession, None]:
+    async with AsyncSession(engine_test, expire_on_commit=False) as session:
+        yield session
 
-@pytest_asyncio.fixture(scope="session", autouse=True)
-async def setup_db(): 
-    """
-    Configure la base de données de test une seule fois au début de la session.
-    """
-    # ... (code de création des tables et surcharge de dépendance inchangé)
-    
-    async with engine_test.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-    
-    app.dependency_overrides[get_session] = get_session_test
-    
-    yield
 
-# --- FIXTURE DU CLIENT REDIS ---
-@pytest_asyncio.fixture(scope="function")
+# ============================================================================
+# REDIS
+# ============================================================================
+
+@pytest_asyncio.fixture(scope="session")
 async def redis_client() -> AsyncGenerator[AsyncRedis, None]:
-
-    REDIS_TEST_URL = "redis://localhost:6379/15" # Utiliser une base de données distincte (ex: 15) pour les tests
-
-    """
-    Crée une connexion asynchrone à Redis, de portée session.
-    La connexion est ouverte avant le premier test et fermée après le dernier.
-    """
-    # 1. Connexion au client Redis
-    client = AsyncRedis.from_url(REDIS_TEST_URL)
-
-    try:
-        # Vérification de la connexion (ping) pour s'assurer que Redis est accessible
-        await client.ping()
-        print(f"\n--- Connexion Redis (TEST) établie à {REDIS_TEST_URL} ---")
-    except Exception as e:
-        pytest.fail(f"Impossible de se connecter à Redis de test à {REDIS_TEST_URL}: {e}")
-        
-    # 2. Yield : Céder la ressource aux tests
-    # Le code ci-dessous (après yield) sera exécuté après tous les tests de la session
+    client = AsyncRedis.from_url(REDIS_TEST_URL, decode_responses=True)
+    await client.flushdb()
     yield client
-
-    # 3. Teardown (Nettoyage après la session)
-    print("\n--- Fermeture de la connexion Redis (TEST) ---")
+    await client.flushdb()
     await client.aclose()
 
-    # 4. Optionnel mais recommandé : Vider la base de données de test
 
-    await client.flushdb()
+@pytest_asyncio.fixture(scope="function")
+async def clean_redis(redis_client: AsyncRedis) -> AsyncRedis:
+    await redis_client.flushdb()
+    yield redis_client
 
-# --- 3. FIXTURE DU CLIENT DE TEST ---
+
+# ============================================================================
+# HTTP CLIENTS
+# ============================================================================
 
 @pytest.fixture(scope="session")
-def client() -> Generator[TestClient, None,None]:
-    """
-    Fournit un client HTTP asynchrone pour tester l'API FastAPI.
-    """
-    with TestClient(app=app) as client:
-        yield client
+def client() -> Generator[TestClient, None, None]:
+    app.dependency_overrides[get_session] = override_get_session
+    with TestClient(app=app) as c:
+        yield c
+    app.dependency_overrides.clear()
 
 
-# --- 4. FIXTURE DE LA CLASSE QUI GENERE LA GRILLE DE MOT-MELE ---
+@pytest_asyncio.fixture(scope="function")
+async def async_client(db_session: AsyncSession, redis_client: AsyncRedis) -> AsyncGenerator[AsyncClient, None]:
+
+    # Override DB
+    app.dependency_overrides[get_session] = override_get_session
+
+    # Override Redis dependency
+    async def override_redis():
+        yield redis_client
+    app.dependency_overrides[redis_generator] = override_redis
+
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test"
+    ) as ac:
+        yield ac
+
+    app.dependency_overrides.clear()
+
+
+# ============================================================================
+# USERS & AUTH
+# ============================================================================
+
+@pytest_asyncio.fixture(scope="function")
+async def test_user(db_session: AsyncSession) -> User:
+    user = User(
+        user_id=str(uuid.uuid4()),
+        username=f"test_user_{uuid.uuid4().hex[:8]}",
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_user_with_token(test_user: User) -> dict:
+    from datetime import timedelta
+    token = create_access_token(test_user.user_id, timedelta(hours=1))
+    return {
+        "user": test_user,
+        "token": token,
+        "headers": {"Authorization": f"Bearer {token}"},
+    }
+
+
+@pytest_asyncio.fixture(scope="function")
+async def two_test_users(db_session: AsyncSession) -> tuple[User, User]:
+    u1 = User(user_id=str(uuid.uuid4()), username="player1")
+    u2 = User(user_id=str(uuid.uuid4()), username="player2")
+    db_session.add(u1)
+    db_session.add(u2)
+    await db_session.commit()
+    await db_session.refresh(u1)
+    await db_session.refresh(u2)
+    return u1, u2
+
+
+# ============================================================================
+# GAME FIXTURES
+# ============================================================================
+
 @pytest.fixture
-def test_word_list() -> List[str]:
-    """Liste de mots de test."""
-    return ["PYTHON", "FASTAPI", "CODE", "TEST", "DEV", "GAME", "API", "WS", "SQL"]
-
-@pytest.fixture(scope="function")
-def generator(test_word_list) -> WordSearchGenerator:
-    """Initialise le générateur de grille pour les tests."""
-    # La grille est de 10x10 par défaut
-    return WordSearchGenerator(word_list=test_word_list, grid_size=10)
+def sample_wordlist() -> WordList:
+    return WordList(
+        theme="Test",
+        words=["PYTHON", "FASTAPI", "CODE", "TEST", "DEV", "GAME", "API", "SQL"],
+    )
 
 
+@pytest_asyncio.fixture(scope="function")
+async def db_wordlist(db_session: AsyncSession) -> WordList:
+    wl = WordList(
+        theme=f"TestTheme_{uuid.uuid4().hex[:8]}",
+        words=["PYTHON", "FASTAPI", "CODE", "TEST", "DEV", "GAME", "API", "SQL"],
+    )
+    db_session.add(wl)
+    await db_session.commit()
+    await db_session.refresh(wl)
+    return wl
+
+
+@pytest.fixture
+def word_generator(sample_wordlist: WordList) -> WordSearchGenerator:
+    return WordSearchGenerator(sample_wordlist, grid_size=10)
+
+
+@pytest_asyncio.fixture(scope="function")
+async def test_game_session(db_session: AsyncSession, two_test_users):
+    u1, u2 = two_test_users
+    g = GameSession(
+        game_id=str(uuid.uuid4()),
+        game_name="wordsearch",
+        player1_id=u1.user_id,
+        player2_id=u2.user_id,
+        game_data={},
+    )
+    db_session.add(g)
+    await db_session.commit()
+    await db_session.refresh(g)
+    return g
+
+
+# ============================================================================
+# WEBSOCKET
+# ============================================================================
+
+@pytest_asyncio.fixture(scope="function")
+async def ws_token(test_user: User, redis_client: AsyncRedis) -> str:
+    t = str(uuid.uuid4())
+    await redis_client.set(f"ws_auth:{t}", test_user.user_id, ex=300)
+    return t

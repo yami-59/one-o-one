@@ -1,30 +1,46 @@
-from sqlmodel import  SQLModel,select
+from fastapi import APIRouter, HTTPException, status
+from sqlmodel import SQLModel, select
+
 from app.core.db import SessionDep
-from fastapi import APIRouter,status,HTTPException
 from app.models.tables import User
-from app.utils.auth import generate_guest_identifier,create_access_token,get_current_player_id,TokenDep
-from app.models.schemas import TokenResponse
+from app.auth.lib import (
+    create_access_token,
+    generate_guest_username,
+    generate_user_id,
+    TokenDep,
+    get_current_user_id
+)
 
-
-
+from datetime import timedelta
+from app.core.settings import settings
+from datetime import timedelta
 
 router = APIRouter()
 
+# Schéma de réponse pour la connexion
+class TokenResponse(SQLModel):
+    access_token: str
+    token_type: str = "Bearer"
+    user_info:dict
 
 
-@router.post("/guest/login", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/guest/login", response_model=TokenResponse, status_code=status.HTTP_201_CREATED
+)
 async def login_guest(session: SessionDep):
     """
     Crée un compte utilisateur invité et génère un JWT pour l'authentification.
     """
     # 1. Génération de l'identifiant unique (UUID ou autre méthode sûre)
-  
-    new_identifier = generate_guest_identifier()
+
+    new_id = generate_user_id()
+
+    new_username = generate_guest_username()
 
 
-    # 2. Création de l'utilisateur dans la DB
-    db_user = User(identifier=new_identifier)
-    
+    db_user = User(user_id=new_id,username=new_username)
+
     try:
         session.add(db_user)
         await session.commit()
@@ -33,40 +49,39 @@ async def login_guest(session: SessionDep):
         # Gérer l'erreur si l'insertion échoue
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Erreur lors de la création de l'utilisateur invité: {e}"
+            detail=f"Erreur lors de la création de l'utilisateur invité: {e}",
         )
+    
+    expires = timedelta(days=7)
 
     # 3. Création du Jeton JWT
-    access_token = create_access_token(new_identifier)
+    access_token = create_access_token(new_id,expires)
 
     # 4. Retourner le jeton et l'identifiant au client
     return TokenResponse(
         access_token=access_token,
-        player_identifier=new_identifier
+        user_info={
+            "user_id":new_id,
+            "username":new_username
+        }
+        
     )
 
-# --- Les Imports et Définitions (Assurez-vous qu'elles sont dans votre contexte) ---
-# router = APIRouter(tags=["Auth"])
-# UserModel, TokenResponse, create_access_token, verify_token, get_session, etc.
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/v1/guest/login")
-# ---------------------------------------------------------------------------------
-
-@router.post("/guest/refresh", status_code=status.HTTP_200_OK, response_model=TokenResponse)
-async def refresh_guest_token(
+@router.post("/refresh", status_code=status.HTTP_200_OK, response_model=TokenResponse)
+async def refresh_token(
     # Le jeton est extrait de l'en-tête Authorization
     token_to_refresh: TokenDep,
     session: SessionDep
 ):
     """
-    Échange un jeton existant (même s'il est expiré) contre un nouveau jeton.
+    Échange un jeton existant contre un nouveau jeton.
     """
     
     # 1. Tenter de vérifier le jeton pour récupérer l'identifiant du joueur (subject 'sub')
     try:
         # NOTE 1: La fonction verify_token DOIT être adaptée pour IGNORER l'expiration ici 
 
-        player_identifier = get_current_player_id(token_to_refresh,False)
-        
+        user_id =get_current_user_id(token_to_refresh)
     except HTTPException:
         # Si le jeton est invalide (mauvaise signature, format incorrect), nous rejetons.
         raise HTTPException(
@@ -75,8 +90,8 @@ async def refresh_guest_token(
         )
     
     # 2. Vérification de l'existence de l'utilisateur en DB
-    statement = select(User).where(User.identifier == player_identifier)
-    user = await session.exec(statement).first()
+    statement = select(User).where(User.user_id == user_id)
+    user = (await session.exec(statement)).first()
 
     if not user:
         raise HTTPException(
@@ -85,10 +100,14 @@ async def refresh_guest_token(
         )
 
     # 3. Génération d'un nouveau jeton JWT
-    new_access_token = create_access_token(player_identifier)
+    new_access_token = create_access_token(user_id,timedelta(days=7))
 
     # 4. Retourner le nouveau jeton
     return TokenResponse(
         access_token=new_access_token,
-        player_identifier=player_identifier
+        user_info={
+            "user_id":user_id,
+            "username":user.username
+        }
+        
     )
