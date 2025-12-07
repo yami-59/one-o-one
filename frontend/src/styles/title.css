@@ -44,7 +44,7 @@
 @keyframes slide-in-up {
   /* Étape 1 : Le div est invisible et en bas (hors écran ou décalé) */
   0% {
-    transform: translateY(200px); /* Décalé de 100px vers le bas */
+    transform: translateY(50px); /* Décalé de 50^x vers le bas */
   }
   /* Étape 2 : Le div est à sa position finale et visible */
   100% {

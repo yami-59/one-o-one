@@ -4,7 +4,7 @@
 
 #Ignore tous les pdf
 *.pdf
-
+node
 # EXCEPTION : N'ignore PAS les fichiers essentiels de Git
 !/.gitignore
 !/.gitattributes
