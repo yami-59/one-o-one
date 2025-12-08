@@ -1,0 +1,95 @@
+# docker-compose.yml (Production)
+version: '3.8'
+
+services:
+  # -----------------------------------------------------------
+  # 1. FRONTEND (Image Nginx Statique)
+  # -----------------------------------------------------------
+  frontend:
+    # 🎯 Utilise le Dockerfile multi-étape de production
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: oneoone_frontend:latest
+    container_name: oneoone_frontend
+    
+    # Mapper le port 80 du conteneur (Nginx) au port 80 de l'hôte (Web standard)
+    ports:
+      - "80:80"
+    
+    # Seul le Frontend a besoin d'être exposé publiquement
+    networks:
+      - backend_network
+
+  # -----------------------------------------------------------
+  # 2. BACKEND API (Uvicorn/FastAPI)
+  # -----------------------------------------------------------
+  api_service:
+    # 🎯 Utilise le Dockerfile multi-étape de production
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: oneoone_backend:latest
+    container_name: oneoone_api
+    
+    # Lire les variables d'environnement de la DB distante/locale et Redis
+    env_file:
+      - ./backend/.env
+      
+    # IMPORTANT: Démarre APRÈS Redis et (si local) PostgreSQL
+    depends_on:
+      - redis_cache
+      # - postgres_db # Si vous utilisez une DB locale
+      
+    # N'expose PAS son port 8000 publiquement. Il est accessible uniquement via le réseau interne.
+    networks:
+      - backend_network
+      
+  # -----------------------------------------------------------
+  # 3. REDIS (Cache et Messages WebSocket)
+  # -----------------------------------------------------------
+  redis_cache:
+    image: redis:7-alpine
+    container_name: oneoone_redis
+    
+    # Persistance des données de cache Redis
+    volumes:
+      - redis_data:/data
+      
+    # N'expose PAS son port 6379 publiquement.
+    networks:
+      - backend_network
+  
+  # -----------------------------------------------------------------
+  # 4. Base de Données Relationnelle (Vérité)
+  # -----------------------------------------------------------------
+  postgres_db:
+    image: postgres:16-alpine
+    container_name: oneoone_postgres
+    environment:
+      POSTGRES_USER: user_db
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: oneoone_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_network 
+
+
+# -----------------------------------------------------------
+# DÉFINITIONS GLOBALES
+# -----------------------------------------------------------
+volumes:
+  # Volume pour les données de Redis (le cache)
+  redis_data:
+    # driver: local (implicite si pas de service cloud)
+    
+  # Si vous décidez de revenir à une DB locale en production :
+  postgres_data: 
+    driver: local 
+  #   # Ou un driver distant pour le cloud, comme RexRay ou un pilote NFS
+
+networks:
+  # Le réseau par défaut qui isole les services et permet la communication par nom
+  backend_network:
+    driver: bridge # Le type de réseau par défaut pour l'isolation

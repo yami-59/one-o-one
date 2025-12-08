@@ -1,11 +1,74 @@
-# Ignore tous les fichiers et dossiers qui commencent par un point
-# (dotfiles, .DS_Store, .vscode, .idea, etc.)
+# Ignore tous les fichiers et dossiers commençant par un point
 .*
+!.gitignore
+!.gitattributes
+!.gitkeep
 
-#Ignore tous les pdf
+# === System files ===
+.DS_Store
+Thumbs.db
+
+# === Node.js ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+.pnpm-store/
+
+# === Build outputs ===
+dist/
+build/
+out/
+.next/
+.cache/
+coverage/
+
+# === TypeScript ===
+*.tsbuildinfo
+
+# === Env files ===
+.env
+.env.* 
+!.env.example
+
+# === Logs ===
+logs/
+*.log
+*.log.*
+log.txt
+
+# === Temp files ===
+tmp/
+temp/
+*.tmp
+*.temp
+
+# === Editor folders ===
+.vscode/
+.idea/
+*.swp
+
+# === OS Archives ===
+*.zip
+*.tar
+*.gz
+*.rar
+
+# === PDFs (selon ta demande) ===
 *.pdf
-node
-# EXCEPTION : N'ignore PAS les fichiers essentiels de Git
-!/.gitignore
-!/.gitattributes
-!/.gitkeep
+
+# === Images cache ===
+.cache/
+.next/cache/
+
+# === Miscellaneous ===
+*.pid
+*.seed
+*.pid.lock
+
+# === React/Next.js specific ===
+.next/
+.vercel/
+.firebase/
