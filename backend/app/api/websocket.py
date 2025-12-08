@@ -169,8 +169,8 @@ async def send_game_state_to_player(
         return False
     
     await room.send_to_player(player_id, {
-        "type": GameMessages.GAME_DATA,
-        **game_state.model_dump(),
+        "type": GameMessages.GAME_STATE,
+        "game_state":{**game_state.model_dump()}
     })
     
     print(f"📤 [{game_id}] État du jeu envoyé à {player_id}")
@@ -201,6 +201,17 @@ async def websocket_endpoint(
             reason="Token invalid or expired",
         )
         return
+    from app.models.tables import User
+    query = (select(User).where(User.user_id == player_id))
+
+    user = (await session.exec(query)).first()
+
+    if not user:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="no corresponding user in database"
+        )
+    
 
     # # 2. Vérification que la partie existe en DB
     # game_session = await get_game_session(session, game_id)
@@ -234,10 +245,10 @@ async def websocket_endpoint(
     # 5. Acceptation et enregistrement
     await websocket.accept()
 
-    if not room.add_player(player_id, websocket):
+    if not room.add_player(player_id, websocket,user.username):
         # Le joueur était peut-être déjà connecté, on met à jour son socket
         room.remove_player(player_id)
-        room.add_player(player_id, websocket)
+        room.add_player(player_id, websocket,user.username)
 
     # 6. 🎯 NOUVEAU: Envoyer l'état du jeu au joueur dès la connexion
     await send_game_state_to_player(room, player_id, redis_conn, game_id)
@@ -297,7 +308,7 @@ async def handle_player_message(
         if opponent_id:
             await room.send_to_player(opponent_id, {
                 **data,
-                "from": player_id,
+                "from": room.get_username(player_id),
             })
     
     elif message_type == "submit_selection":
@@ -311,10 +322,11 @@ async def handle_player_message(
             await room.broadcast({
                 "type":GameMessages.WORD_FOUND_SUCCESS,
                 **result,
+                "found_by":room.get_username(player_id)
             })
         
         else:
-            await room.send_to_player(player_id,result)
+            await room.send_to_player(player_id,{**result,"from":room.get_username(player_id)})
         
         pass
 
@@ -324,7 +336,7 @@ async def handle_player_message(
         if opponent_id:
             await room.send_to_player(opponent_id, {
                 **data,
-                "from": player_id,
+                "from": room.get_username(player_id),
             })
 
 

@@ -257,7 +257,6 @@ class WordSearchEngine:
 
         # Mise à jour des stats joueurs
         for user_id, user in users.items():
-            user.points += final_scores.get(user_id, 0)
 
             if user_id == winner_id:
                 user.victories += 1

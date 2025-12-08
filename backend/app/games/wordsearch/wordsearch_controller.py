@@ -21,7 +21,7 @@ async def get_random_wordlist(session: AsyncSession) -> Optional[WordList]:
 
 
 class WordSearchController:
-    GAME_DURATION_SECONDS = 180
+    GAME_DURATION_SECONDS : int  = 180
 
     def __init__(
         self,
@@ -35,8 +35,9 @@ class WordSearchController:
         self._engine = WordSearchEngine(game_id, db_session, redis_client)
         self._timeout_task: asyncio.Task | None = None
 
-    @staticmethod
+    @classmethod
     async def initialize_game(
+        cls,
         game_id: str,
         game_name: str,
         p1_id: str,
@@ -55,6 +56,7 @@ class WordSearchController:
             grid_data=grid_data,
             words_to_find=words_to_find,
             current_status=GameStatus.GAME_INITIALIZED,
+            game_duration=cls.GAME_DURATION_SECONDS
         )
 
         new_session = GameSession(

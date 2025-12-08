@@ -25,7 +25,7 @@ class GameMessages(str, Enum):
     SUBMIT_SELECTION = "submit_selection"  # Soumission du mot final (validation)
     SELECTION_UPDATE = "selection_update"  # Mise à jour des coordonnées (aperçu en temps réel)
     WORD_FOUND_SUCCESS = "word_found_success"  # Mot trouvé, rayer la liste
-    GAME_DATA="game_data"
+    GAME_STATE="game_state"
 
 
     # Statuts d'Erreur

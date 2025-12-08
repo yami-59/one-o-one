@@ -23,7 +23,7 @@ class GameRoom:
         max_players: int = 2,
     ):
         self._game_id = game_id
-        self._players: dict[str, WebSocket] = {}  # {player_id: websocket}
+        self._players: dict[str, dict[str,Any]] = {}  # {player_id: websocket}
         self._state: GameStatus = GameStatus.WAITING_FOR_PLAYERS
         self._max_players = max_players
         self._redis_conn = redis_conn
@@ -55,7 +55,7 @@ class GameRoom:
         """Vérifie si la salle est vide."""
         return self.player_count == 0
 
-    def add_player(self, player_id: str, websocket: WebSocket) -> bool:
+    def add_player(self, player_id: str, websocket: WebSocket,username:str) -> bool:
         """
         Ajoute un joueur à la salle.
         Retourne False si la salle est pleine ou si le joueur est déjà présent.
@@ -64,8 +64,12 @@ class GameRoom:
             return False
         if player_id in self._players:
             return False
-        self._players[player_id] = websocket
-        print(f"🎮 [{self._game_id}] Joueur {player_id} a rejoint ({self.player_count}/{self._max_players})")
+        
+        player = self._players.setdefault(player_id, {})
+        player["websocket"] = websocket
+        player["username"] = username
+        
+        print(f"🎮 [{self._game_id}] Joueur {username} a rejoint ({self.player_count}/{self._max_players})")
         return True
 
     def remove_player(self, player_id: str) -> bool:
@@ -78,7 +82,8 @@ class GameRoom:
 
     def get_player_socket(self, player_id: str) -> WebSocket | None:
         """Récupère le WebSocket d'un joueur."""
-        return self._players.get(player_id)
+        if self._players.get(player_id) :
+            return self._players.get[player_id].get('websocket')
 
     def get_opponent_id(self, player_id: str) -> str | None:
         """Trouve l'ID de l'adversaire."""
@@ -86,13 +91,27 @@ class GameRoom:
             if pid != player_id:
                 return pid
         return None
+    
+    def get_username(self,player_id)-> str:
+        return self._players[player_id]['username']
+    
+    def get_opponent_username(self,player_id:str) -> str|None:
+
+        for pid in self._players:
+            if pid != player_id and self._players.get(player_id) : 
+                return self._players[pid]['username']
+
+        return None
 
     async def send_to_player(self, player_id: str, message: dict[str, Any]) -> bool:
         """
         Envoie un message à un joueur spécifique.
         Retourne False si l'envoi échoue.
         """
-        websocket = self._players.get(player_id)
+        websocket=None
+        if self._players.get(player_id) :
+             websocket = self._players.get(player_id).get("websocket")
+        
         if not websocket:
             return False
 

@@ -60,10 +60,7 @@ async def login_guest(session: SessionDep):
     # 4. Retourner le jeton et l'identifiant au client
     return TokenResponse(
         access_token=access_token,
-        user_info={
-            "user_id":new_id,
-            "username":new_username
-        }
+        user_info=db_user
         
     )
 
