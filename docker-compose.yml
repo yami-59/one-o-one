@@ -1,5 +1,4 @@
-# docker-compose.yml (Production)
-version: '3.8'
+# docker-compose.yml 
 
 services:
   # -----------------------------------------------------------
@@ -12,11 +11,11 @@ services:
       dockerfile: Dockerfile
     image: oneoone_frontend:latest
     container_name: oneoone_frontend
-    
+    extra_hosts:
+    - "host.docker.internal:host-gateway"  # ← Ajouter cette ligne
     # Mapper le port 80 du conteneur (Nginx) au port 80 de l'hôte (Web standard)
     ports:
-      - "80:80"
-    
+      - "8080:80"
     # Seul le Frontend a besoin d'être exposé publiquement
     networks:
       - backend_network
@@ -34,7 +33,7 @@ services:
     
     # Lire les variables d'environnement de la DB distante/locale et Redis
     env_file:
-      - ./backend/.env
+      - ./backend/.env.local
       
     # IMPORTANT: Démarre APRÈS Redis et (si local) PostgreSQL
     depends_on:
