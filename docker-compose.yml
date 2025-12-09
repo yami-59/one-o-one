@@ -54,6 +54,9 @@ services:
     # Persistance des données de cache Redis
     volumes:
       - redis_data:/data
+
+    ports:
+      - "6379:6379"
       
     # N'expose PAS son port 6379 publiquement.
     networks:
