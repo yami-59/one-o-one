@@ -3,13 +3,13 @@
 Script de gestion de la base de données.
 
 Usage:
-    python -m app.scripts.db_manager create      # Crée les tables
-    python -m app.scripts.db_manager drop        # Supprime les tables
-    python -m app.scripts.db_manager reset       # Drop + Create
-    python -m app.scripts.db_manager backup      # Sauvegarde les données
-    python -m app.scripts.db_manager restore     # Restaure depuis une sauvegarde
-    python -m app.scripts.db_manager seed        # Insère des données de base
-    python -m app.scripts.db_manager status      # Affiche l'état de la DB
+    python -m app.sql.db_manager create      # Crée les tables
+    python -m app.sql.db_manager drop        # Supprime les tables
+    python -m app.sql.db_manager reset       # Drop + Create
+    python -m app.sql.db_manager backup      # Sauvegarde les données
+    python -m app.sql.db_manager restore     # Restaure depuis une sauvegarde
+    python -m app.sql.db_manager seed        # Insère des données de base
+    python -m app.sql.db_manager status      # Affiche l'état de la DB
 """
 
 import argparse

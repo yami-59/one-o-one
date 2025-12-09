@@ -1,5 +1,5 @@
-INSERT INTO wordlist (theme, words) VALUES (
-    'Sport',
+INSERT INTO wordlist (theme, words) VALUES
+    ('Sport',
     '[
         "football","basket","tennis","natation","rugby",
         "boxe","karate","judo","skate","velo",
@@ -21,11 +21,8 @@ INSERT INTO wordlist (theme, words) VALUES (
         "rowing","triathlon","speedway","endurance","archery",
         "taekwondo","javelin","saut","hauteur","poids",
         "disque","marche","boxeur","grimpeur","sprinter"
-    ]'
-) ON CONFLICT DO NOTHING ;
-
-INSERT INTO wordlist (theme, words) VALUES (
-    'Nourriture',
+    ]'),
+    ('Nourriture',
     '[
         "pomme","banane","orange","fraise","raisin",
         "melon","kiwi","citron","poire","mangue",
@@ -47,13 +44,8 @@ INSERT INTO wordlist (theme, words) VALUES (
         "abricot","datte","figue","prune","cerise",
         "peche","maquereau","merlan","sardine","calamar",
         "salade","compote","purée","hachis"
-    ]'
-) ON CONFLICT DO NOTHING ;
-
-
-
-INSERT INTO wordlist (theme, words) VALUES (
-    'Musique',
+    ]'),
+    ('Musique',
     '[
         "rock","metal","jazz","blues","rap",
         "pop","funk","disco","techno","house",
@@ -73,12 +65,8 @@ INSERT INTO wordlist (theme, words) VALUES (
         "flanger","chorale","cabasa","clave","harmo",
         "arpege","suite","opera","mazurka","tango",
         "samba","bolero","rave","grime","ambient"
-    ]'
-) ON CONFLICT DO NOTHING ;
-
-
-INSERT INTO wordlist (theme, words) VALUES (
-    'Film',
+    ]'),
+    ('Film',
     '[
         "avatar","matrix","scarface","jaws","alien",
         "rocky","amadeus","vertigo","skyfall","inception",
@@ -96,12 +84,8 @@ INSERT INTO wordlist (theme, words) VALUES (
         "antman","deadpool","django","amores","climax",
         "frozen2","tenet","nope","noah","moonfall",
         "sunrise","shorts","annie","edison","metropolis"
-    ]'
-) ON CONFLICT DO NOTHING ;
-
-
-INSERT INTO wordlist (theme, words) VALUES (
-    'Pays',
+    ]'),
+    ('Pays',
     '[
         "france","spain","italy","portugal","greece",
         "turkey","poland","norway","sweden","finland",
@@ -122,12 +106,8 @@ INSERT INTO wordlist (theme, words) VALUES (
         "kuwait","brunei","malaysia","vietnam","myanmar",
         "thailand","rwanda","burundi","libya","senegal",
         "zimbabwe","botswana","namibia","samoa","tonga"
-    ]'
-) ON CONFLICT DO NOTHING ;
-
-
-INSERT INTO wordlist (theme, words) VALUES (
-    'Animaux',
+    ]'),
+    ('Animaux',
     '[
         "chien","chat","lion","tigre","zebre",
         "singe","gorille","panda","koala","renard",
@@ -148,12 +128,8 @@ INSERT INTO wordlist (theme, words) VALUES (
         "buffalo","orang","lemur","tapir","condor",
         "wale","orca","manatee","narwhal","sardine",
         "thon","makrel","requin","manta","moray"
-    ]'
-) ON CONFLICT DO NOTHING ;
-
-
-INSERT INTO wordlist (theme, words) VALUES (
-    'Metiers',
+    ]'),
+    ('Metiers',
     '[
         "boulanger","plombier","pompier","docteur","dentiste",
         "avocat","notaire","juge","infirmier","sagefemme",
@@ -172,12 +148,8 @@ INSERT INTO wordlist (theme, words) VALUES (
         "forgeron","minier","livreur","traiteur","boucher",
         "charcut","pecheur","facteur","controle","auditeur",
         "douanier","gendarme","policier","magasin","retailer"
-    ]'
-) ON CONFLICT DO NOTHING ;
-
-
-INSERT INTO wordlist (theme, words) VALUES (
-    'Tech',
+    ]'),
+    ('Tech',
     '[
         "python","java","golang","rust","docker",
         "nginx","apache","linux","ubuntu","debian",
@@ -196,12 +168,8 @@ INSERT INTO wordlist (theme, words) VALUES (
         "bigdata","spark","hadoop","kafka","flink",
         "tensor","keras","opencv","prompt","regexp",
         "scraper","crawler","devops","backend","frontend"
-    ]'
-) ON CONFLICT DO NOTHING;
-
-
-INSERT INTO wordlist (theme, words) VALUES (
-    'Couleurs',
+    ]'),
+    ('Couleurs',
     '[
         "rouge","bleu","vert","jaune","noir",
         "blanc","rose","violet","orange","cyan",
@@ -219,5 +187,5 @@ INSERT INTO wordlist (theme, words) VALUES (
         "melon","cacao","black","white","ivory",
         "shadow","silver","chrome","peach","coral",
         "hazel","topaz","sable","plum","iris"
-    ]'
-) ON CONFLICT DO NOTHING ;
+    ]')
+ON CONFLICT DO NOTHING;
