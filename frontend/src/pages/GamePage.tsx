@@ -1,5 +1,5 @@
 import { Send, Volume2, VolumeX } from 'lucide-react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import GameGrid from '../components/GameGrid';
 import Navbar from '../components/Navbar';
@@ -98,7 +98,7 @@ export default function GamePage() {
         </div>
       )}
 
-      <main className="flex-grow p-4 md:p-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <main className="grow p-4 md:p-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Zone de Jeu */}
         <div className="lg:col-span-2 flex flex-col" onClick={handleGridClick}>
@@ -116,7 +116,7 @@ export default function GamePage() {
             </button>
           </div>
           
-          <div className="flex-grow">
+          <div className="grow">
             {/* On passe des props fictives pour l'instant */}
             <GameGrid grid={grid} selection={Array(10).fill(Array(10).fill(0))} />
           </div>
@@ -139,7 +139,7 @@ export default function GamePage() {
             </button>
           </div>
 
-          <div className="flex-grow p-4 overflow-y-auto bg-gray-900/50">
+          <div className="grow p-4 overflow-y-auto bg-gray-900/50">
             {activeTab === 'words' ? (
               <div className="space-y-2">
                 {['REACT', 'VITE', 'TAILWIND', 'TYPESCRIPT', 'SOCKET'].map((w, i) => (
@@ -159,8 +159,8 @@ export default function GamePage() {
 
           {activeTab === 'chat' && (
             <div className="p-3 bg-gray-800 border-t border-gray-700 flex gap-2">
-              <input className="flex-grow bg-gray-900 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-pink" placeholder="Message..." />
-              <button className="bg-brand-pink p-2 rounded text-white"><Send size={16}/></button>
+              <input className="grow bg-gray-900 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-pink" placeholder="Message..." />
+              <div className="bg-brand-pink p-2 rounded text-white"><Send size={16}/></div>
             </div>
           )}
         </div>
