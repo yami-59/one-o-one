@@ -429,11 +429,11 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
                 Exemples:
-                python -m app.scripts.db_manager create
-                python -m app.scripts.db_manager reset --force
-                python -m app.scripts.db_manager backup --name pre_migration
-                python -m app.scripts.db_manager restore
-                python -m app.scripts.db_manager seed
+                python -m app.sql.db_manager create
+                python -m app.sql.db_manager reset --force
+                python -m app.sql.db_manager backup --name pre_migration
+                python -m app.sql.db_manager restore
+                python -m app.sql.db_manager seed
         """,
     )
     

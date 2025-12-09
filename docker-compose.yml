@@ -69,6 +69,8 @@ services:
       POSTGRES_USER: user_db
       POSTGRES_PASSWORD: password
       POSTGRES_DB: oneoone_db
+    ports:
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
