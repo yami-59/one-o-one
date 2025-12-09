@@ -1,10 +1,9 @@
 import { useEffect } from 'react';
-import Title from '../components/title'; 
+import Title from '../components/Title'; 
 import WordSearch  from '../wordsearch/components/mainComponent'; // Supposons que c'est un composant fonctionnel
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext'; // 🎯 Importer le hook de contexte
 import Loading from './Loading';
-import { type UserInfo } from '../auth/AuthContext';
 
 // NOTE: Le composant doit être dans un fichier .tsx (pour le JSX et TypeScript)
 
@@ -48,7 +47,6 @@ function GameRoomWordSearch() {
     }
 
 
-    const user : UserInfo = JSON.parse(userInfo)
 
     // 5. Rendu du Composant de Jeu
     return (
@@ -59,7 +57,7 @@ function GameRoomWordSearch() {
                 {/* 🎯 PASSAGE DES PROPS CRITIQUES AU COMPOSANT DE JEU */}
                 <WordSearch 
                     gameId={gameId} 
-                    user={user}
+                    user={userInfo}
                 />
             </div>
             

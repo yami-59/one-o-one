@@ -21,7 +21,7 @@ router = APIRouter()
 class TokenResponse(SQLModel):
     access_token: str
     token_type: str = "Bearer"
-    user_info:dict
+    user_info:User
 
 
 

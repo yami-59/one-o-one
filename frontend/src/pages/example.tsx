@@ -1,13 +1,12 @@
-import Title from '../components/title'; // Assurez-vous que le chemin est correct
+import Title from '../components/Title'; // Assurez-vous que le chemin est correct
 import MatchMakingButton from '../components/matchmakingButton'; // Assurez-vous que le chemin est correct
 import { useAuth } from '../auth/AuthContext'; // 🎯 Importer le hook de contexte
 import Loading from './Loading';
-import { type UserInfo } from '../auth/AuthContext';
 
 
 // Définissez le composant dans un fichier .tsx
 
-function Exemple() {
+function Example() {
     
     // 🎯 1. CONSOMMATION DU CONTEXTE
     const { token, userInfo, isLoading, isAuthenticated } = useAuth();
@@ -32,7 +31,7 @@ function Exemple() {
         );
     }
 
-    const user:UserInfo = JSON.parse(userInfo)
+  
 
     // 4. Rendu de l'application principale si le token est disponible
     return (
@@ -41,8 +40,8 @@ function Exemple() {
             <Title />
             
             {/* 🎯 Affichage de l'ID du joueur pour le débogage */}
-            <p className="text-gray-400 mb-4 ">Player id : {user.user_id}</p>
-            <p className="text-gray-400 mb-4 ">Player username : {user.username}</p>
+            <p className="text-gray-400 mb-4 ">Player id : {userInfo.user_id}</p>
+            <p className="text-gray-400 mb-4 ">Player username : {userInfo.username}</p>
             
             <div className="mt-50 flex items-center ">
                 {/* 🎯 Passer le token et l'ID au composant de bouton */}
@@ -53,4 +52,4 @@ function Exemple() {
     );
 }
 
-export default Exemple;
+export default Example;

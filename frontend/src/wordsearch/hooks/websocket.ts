@@ -1,7 +1,7 @@
 // /frontend/src/wordsearch/websocket.ts
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { type User} from '../../auth/AuthContext';
+import { type UserProps } from '../../auth/AuthContext';
 import type { WordSolution } from '../types';
 import { GameMessages, GameStatus } from '../constants';
 
@@ -63,7 +63,7 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 // HOOK
 // =============================================================================
 
-export const useWebSocket = (user: User, gameId: string): UseWebSocketReturn => {
+export const useWebSocket = (user: UserProps, gameId: string): UseWebSocketReturn => {
     const [ws, setWs] = useState<WebSocket | null>(null);
     const [status, setStatus] = useState<WebSocketStatusType>(WebSocketStatus.DISCONNECTED);
     const [gameState, setGameState] = useState<WordSearchData | null>(null);

@@ -5,7 +5,7 @@ import NameListTable from './nameListTable';
 import WordSearchTable from './wordSearchTable';
 import { useCanvasDrawing } from '../hooks/canvas';
 import { useWebSocket, WebSocketStatus } from '../hooks/websocket';
-import { type User } from '../../auth/AuthContext';
+import { type UserProps } from '../../auth/AuthContext';
 import type { WordSolution } from '../types';
 
 // =============================================================================
@@ -13,7 +13,7 @@ import type { WordSolution } from '../types';
 // =============================================================================
 
 interface WordSearchProps {
-    user: User;
+    user: UserProps;
     gameId: string;
 }
 

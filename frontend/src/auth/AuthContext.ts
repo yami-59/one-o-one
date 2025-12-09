@@ -6,7 +6,7 @@ import { createContext, useContext, type ReactNode } from 'react';
 
 // Type pour les données que le backend envoie initialement
 // --- Interface User ---
-export interface User {
+export interface UserProps {
   user_id: string;        // identifiant unique (clé primaire)
   username: string;       // nom d'utilisateur unique
   mail?: string;          // email optionnel, mais unique si présent
@@ -25,7 +25,7 @@ export interface UserStats {
 export interface AuthData {
     access_token: string;
     token_type: string ;
-    user_info: User;
+    user_info: UserProps;
 }
 
 
@@ -33,9 +33,11 @@ export interface AuthData {
 // Type des valeurs exposées par le contexte
 export interface AuthContextValue {
     token: string | null;
-    userInfo: string | null;
+    userInfo: UserProps | null;
     isLoading: boolean;
     isAuthenticated: boolean;
+    loginAsGuest:() => Promise<void>
+    logout:() => void
     // Note: Vous ajouteriez ici une fonction logout ou refreshToken
 }
 
@@ -46,6 +48,9 @@ const initialContextValue: AuthContextValue = {
     userInfo: null,
     isLoading: true,
     isAuthenticated: false,
+    loginAsGuest:(): Promise<void> => Promise.resolve(),
+    logout :()=>{}
+
 };
 
 export const AuthContext = createContext<AuthContextValue>(initialContextValue);
