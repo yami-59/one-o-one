@@ -177,6 +177,8 @@ async def send_game_state_to_player(
     return True
 
 
+
+
 # -----------------------------------------------------------------
 # ROUTE WEBSOCKET PRINCIPALE
 # -----------------------------------------------------------------
@@ -255,17 +257,10 @@ async def websocket_endpoint(
 
     print(f"✅ [{game_id}] Joueur {player_id} connecté ({room.player_count}/2)")
 
-    # # 6. Logique de démarrage
-    # if room.is_full() and room.state == GameStatus.WAITING_FOR_PLAYERS:
-    #     asyncio.create_task(room.handle_game_start())
+
+    # await room.handle_game_start()
+
     
-    
-    
-    if room.state == GameStatus.WAITING_FOR_PLAYERS:
-        await room.send_to_player(player_id, {
-            "type": GameStatus.WAITING_FOR_PLAYERS.value,
-            "message": "En attente du second joueur...",
-        })
 
     # 7. Boucle de réception des messages
     try:

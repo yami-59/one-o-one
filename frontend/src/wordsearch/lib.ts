@@ -1,21 +1,32 @@
-import { CELL_SIZE, RAINBOW_COLORS } from './constants';
+import { CELL_SIZE, RAINBOW_COLORS,GAP_SIZE  } from './constants';
 import { type WordConstructProps, type Position, type GridIndexes } from './types';
 
 // Fonction utilitaire à placer dans votre composant WordGrid
 
-export const getGridIndex = (pos: Position): GridIndexes => {
+/**
+ * Convertit une position pixel en index de grille.
+ * Prend en compte le gap et protège contre les dépassements.
+ */
+export const getGridIndex = (pos: Position, gridSize: number = 10): GridIndexes => {
+    const pixelToIndex = (pixel: number): number => {
+        const cellWithGap = CELL_SIZE + GAP_SIZE;
+        const index = Math.floor(pixel / cellWithGap);
+        
+        // Clamp entre 0 et gridSize - 1
+        return Math.max(0, Math.min(index, gridSize - 1));
+    };
+
     return {
         start_index: {
-            col: Math.floor(pos.start_point.x / CELL_SIZE),
-            row: Math.floor(pos.start_point.y / CELL_SIZE),
+            col: pixelToIndex(pos.start_point.x),
+            row: pixelToIndex(pos.start_point.y),
         },
         end_index: {
-            col: Math.floor(pos.end_point.x / CELL_SIZE),
-            row: Math.floor(pos.end_point.y / CELL_SIZE),
+            col: pixelToIndex(pos.end_point.x),
+            row: pixelToIndex(pos.end_point.y),
         },
     };
 };
-
 
 /**
  * Reconstruit le mot à partir de la grille en utilisant les indices de début et de fin.

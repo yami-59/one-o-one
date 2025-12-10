@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { Search } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -23,8 +24,10 @@ interface MatchFoundResponse {
 }
 
 interface MatchmakingButtonProps {
-  token: string;
+  token: string|null;
   game_name:string;
+  isAuthenticated:boolean,
+  setShowLoginModal:React.Dispatch<React.SetStateAction<boolean>>
 }
 
 // =============================================================================
@@ -81,7 +84,7 @@ const matchmakingApi = {
 // COMPONENT
 // =============================================================================
 
-export default function MatchmakingButton({ token,game_name }: MatchmakingButtonProps) {
+export default function MatchmakingButton({ token,game_name,isAuthenticated,setShowLoginModal }: MatchmakingButtonProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [message, setMessage] = useState("En attente d'un joueur...");
   const [isLoading, setIsLoading] = useState(false);
@@ -89,8 +92,10 @@ export default function MatchmakingButton({ token,game_name }: MatchmakingButton
   const navigate = useNavigate();
 
   // Handler pour rejoindre/quitter la file
-  const handlePlayClick = useCallback(async () => {
+  const handleSearchGame = useCallback(async () => {
     if (isLoading) return;
+
+    if(!isAuthenticated || !token) {setShowLoginModal(true);return;}
 
     setIsLoading(true);
 
@@ -120,13 +125,15 @@ export default function MatchmakingButton({ token,game_name }: MatchmakingButton
     } finally {
       setIsLoading(false);
     }
-  }, [token, isSearching, isLoading]);
+  }, [token, isSearching, isLoading,isAuthenticated,setShowLoginModal]);
 
   // Handler pour annuler
   const handleCancel = useCallback(async () => {
     if (isLoading) return;
 
     setIsLoading(true);
+    if(!isAuthenticated || !token) {setShowLoginModal(true);return;}
+
 
     try {
       await matchmakingApi.leave(token);
@@ -135,18 +142,14 @@ export default function MatchmakingButton({ token,game_name }: MatchmakingButton
     } finally {
       setIsLoading(false);
     }
-  }, [token, isLoading]);
+  }, [token, isLoading,isAuthenticated,setShowLoginModal]);
 
-  // Handler pour reset (dev only)
-  const handleReset = useCallback(async () => {
-    setIsSearching(false);
-    const response = await matchmakingApi.reset(token);
-    console.log("Reset:", response);
-  }, [token]);
 
   // Polling pour vérifier si un match est trouvé
   useEffect(() => {
     if (!isSearching) return;
+    if(!isAuthenticated || !token) {return;}
+
 
     const intervalId = setInterval(async () => {
       const response = await matchmakingApi.checkMatch(token);
@@ -175,7 +178,7 @@ export default function MatchmakingButton({ token,game_name }: MatchmakingButton
       clearInterval(intervalId);
       console.log("🧹 Polling arrêté");
     };
-  }, [token, isSearching,game_name, navigate]);
+  }, [token, isSearching,game_name, navigate,isAuthenticated]);
 
   // =============================================================================
   // RENDER
@@ -185,20 +188,12 @@ export default function MatchmakingButton({ token,game_name }: MatchmakingButton
     <div className="flex flex-row items-center gap-3">
       {/* Bouton Play / Searching */}
       <button
-        onClick={handlePlayClick}
-        disabled={isLoading}
-        className={`
-          flex items-center justify-center gap-3
-          font-bold py-3 px-8 rounded-lg
-          shadow-md transition-all duration-150
-          cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed
-          ${isSearching
-            ? "bg-indigo-700 min-w-[220px]"
-            : "bg-indigo-600 hover:bg-indigo-700 active:translate-y-0.5"
-          }
-          text-white
-        `}
+          onClick={handleSearchGame}
+          disabled={isLoading}
+          className="bg-brand-yellow text-gray-900 hover:bg-yellow-400 font-bold text-xl px-12 py-4 rounded-xl shadow-lg shadow-yellow-500/20 transition-all transform hover:scale-105 flex items-center justify-center gap-3 mx-auto"
       >
+          <Search size={24} />
+     
         {isSearching ? (
           <>
             {/* Spinner */}
@@ -214,7 +209,7 @@ export default function MatchmakingButton({ token,game_name }: MatchmakingButton
             <span className="text-sm">{message}</span>
           </>
         ) : (
-          <span className="text-lg">Play</span>
+          <span className="text-sm"> Rechercher une partie </span>
         )}
       </button>
 
@@ -223,30 +218,9 @@ export default function MatchmakingButton({ token,game_name }: MatchmakingButton
         <button
           onClick={handleCancel}
           disabled={isLoading}
-          className="
-            bg-red-500 hover:bg-red-600
-            text-white font-bold py-3 px-6 rounded-lg
-            shadow-md transition-all duration-150
-            active:translate-y-0.5
-            cursor-pointer disabled:opacity-50
-          "
+          className="bg-red-400 text-gray-900 hover:bg-red-500 font-bold text-xl px-12 py-4 rounded-xl shadow-lg shadow-red-500/20 transition-all transform hover:scale-105 flex items-center justify-center gap-3 mx-auto"
         >
           Annuler
-        </button>
-      )}
-
-      {/* Bouton Reset (Dev) */}
-      {import.meta.env.DEV && (
-        <button
-          onClick={handleReset}
-          className="
-            absolute right-5 top-5
-            bg-gray-600 hover:bg-gray-700
-            text-white text-sm py-2 px-4 rounded
-            transition-colors
-          "
-        >
-          Reset Queue
         </button>
       )}
     </div>

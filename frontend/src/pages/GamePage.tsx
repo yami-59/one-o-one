@@ -1,7 +1,7 @@
-import { Send, Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import GameGrid from '../components/GameGrid';
+// import GameGrid from '../wordsearch/components/GameGrid';
 import Navbar from '../components/Navbar';
 import Scoreboard from '../components/Scoreboard';
 
@@ -18,23 +18,9 @@ export default function GamePage() {
   // État du jeu
   const [timeLeft, setTimeLeft] = useState(180); // 3 minutes
   const [gameOver, setGameOver] = useState(false);
-  const [activeTab, setActiveTab] = useState<'words' | 'chat'>('words');
   const [soundEnabled, setSoundEnabled] = useState(true);
 
-  // Grille (Statique pour la démo)
-  const grid = [
-    ['P','O','N','S','D','I','S','C','O','M'],
-    ['O','R','C','E','U','P','H','C','D','K'],
-    ['D','G','A','R','T','S','R','C','H','Z'],
-    ['Z','E','F','F','A','I','P','O','J','E'],
-    ['O','N','E','I','A','X','O','E','C','R'],
-    ['L','I','T','F','L','T','I','E','N','E'],
-    ['I','A','S','P','E','C','B','L','D','D'],
-    ['S','N','O','N','E','V','B','U','S','I'],
-    ['E','Y','A','R','D','S','C','O','S','L'],
-    ['R','C','T','I','A','T','I','M','I','A'],
-  ];
-  
+
   // Gestion du Timer
   useEffect(() => {
     if (timeLeft > 0 && !gameOver) {
@@ -116,54 +102,12 @@ export default function GamePage() {
             </button>
           </div>
           
-          <div className="grow">
-            {/* On passe des props fictives pour l'instant */}
-            <GameGrid grid={grid} selection={Array(10).fill(Array(10).fill(0))} />
+          <div className="grow ">
+            {/* L'endroit ou se trouve l'ecran de jeux */}
           </div>
         </div>
 
-        {/* Panneau Latéral */}
-        <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden flex flex-col h-[500px] lg:h-auto">
-          <div className="flex border-b border-gray-700">
-            <button 
-              onClick={() => setActiveTab('words')}
-              className={`flex-1 py-3 font-bold text-sm uppercase tracking-wider ${activeTab === 'words' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
-            >
-              Mots (4/12)
-            </button>
-            <button 
-              onClick={() => setActiveTab('chat')}
-              className={`flex-1 py-3 font-bold text-sm uppercase tracking-wider ${activeTab === 'chat' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white'}`}
-            >
-              Chat
-            </button>
-          </div>
-
-          <div className="grow p-4 overflow-y-auto bg-gray-900/50">
-            {activeTab === 'words' ? (
-              <div className="space-y-2">
-                {['REACT', 'VITE', 'TAILWIND', 'TYPESCRIPT', 'SOCKET'].map((w, i) => (
-                  <div key={i} className={`p-2 rounded flex justify-between items-center ${i===0 ? 'bg-brand-pink/20 text-brand-pink line-through' : 'bg-gray-800 text-gray-300'}`}>
-                    <span>{w}</span>
-                    {i===0 && <span className="text-xs bg-brand-pink text-white px-1 rounded">MOI</span>}
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-3 text-sm">
-                <div className="text-brand-blue font-bold">Adv: <span className="text-white font-normal">Bien joué !</span></div>
-                <div className="text-brand-pink font-bold">Moi: <span className="text-white font-normal">Merci :)</span></div>
-              </div>
-            )}
-          </div>
-
-          {activeTab === 'chat' && (
-            <div className="p-3 bg-gray-800 border-t border-gray-700 flex gap-2">
-              <input className="grow bg-gray-900 rounded px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-brand-pink" placeholder="Message..." />
-              <div className="bg-brand-pink p-2 rounded text-white"><Send size={16}/></div>
-            </div>
-          )}
-        </div>
+        
 
       </main>
     </div>

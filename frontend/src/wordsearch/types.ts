@@ -48,3 +48,7 @@ export interface CanvaDrawingProps {
 export interface WordSearchTableProps extends CanvaDrawingProps {
     gridData: string[][];
 }
+
+export interface GameGridProps extends CanvaDrawingProps {
+    gridData: string[][];
+}

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import Title from '../components/Title'; 
-import WordSearch  from '../wordsearch/components/mainComponent'; // Supposons que c'est un composant fonctionnel
+import WordSearch  from '../wordsearch/components/WordSearch'; // Supposons que c'est un composant fonctionnel
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext'; // 🎯 Importer le hook de contexte
 import Loading from './Loading';

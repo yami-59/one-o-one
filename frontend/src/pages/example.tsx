@@ -1,5 +1,5 @@
 import Title from '../components/Title'; // Assurez-vous que le chemin est correct
-import MatchMakingButton from '../components/matchmakingButton'; // Assurez-vous que le chemin est correct
+import MatchMakingButton from '../components/MatchmakingButton'; // Assurez-vous que le chemin est correct
 import { useAuth } from '../auth/AuthContext'; // 🎯 Importer le hook de contexte
 import Loading from './Loading';
 

@@ -1,7 +1,7 @@
 // /frontend/src/wordsearch/canvas.ts
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
-import { CANVAS_SIZE, CELL_SIZE, LINE_THICKNESS } from '../constants';
+import { CELL_SIZE,GAP_SIZE, LINE_THICKNESS } from '../constants';
 import { getGridIndex, getRandomRainbowColor, construct_word } from '../lib';
 import { type Position, type WordSolution, type GridIndexes } from '../types';
 import { GameMessages } from '../constants';
@@ -43,15 +43,16 @@ const MIN_WORD_LENGTH = 2;
  * Centre la ligne au milieu de chaque cellule pour un meilleur rendu.
  */
 const solutionToCanvasPosition = (solution: WordSolution): Position => {
-    const halfCell = CELL_SIZE / 2;
+    const cellWithGap = CELL_SIZE + GAP_SIZE;
+    const halfCell = cellWithGap / 2;
     return {
         start_point: {
-            x: solution.start_index.col * CELL_SIZE + halfCell,
-            y: solution.start_index.row * CELL_SIZE + halfCell,
+            x: solution.start_index.col * cellWithGap + halfCell,
+            y: solution.start_index.row * cellWithGap + halfCell,
         },
         end_point: {
-            x: solution.end_index.col * CELL_SIZE + halfCell,
-            y: solution.end_index.row * CELL_SIZE + halfCell,
+            x: solution.end_index.col * cellWithGap + halfCell,
+            y: solution.end_index.row * cellWithGap + halfCell,
         },
     };
 };
@@ -87,6 +88,10 @@ export const useCanvasDrawing = (
     ws: WebSocket | null,
     playerId?: string
 ): UseCanvasDrawingReturn => {
+
+    const gridSize = gridData.length;
+
+    const CANVAS_SIZE = gridSize * CELL_SIZE + (gridSize - 1) * GAP_SIZE;
     
     // ─────────────────────────────────────────────────────────────────────────
     // REFS

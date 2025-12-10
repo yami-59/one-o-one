@@ -9,6 +9,9 @@ from .constants import GameStatus
 from .wordsearch.redis_keys import redis_state_key
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.games.wordsearch.wordsearch_controller import WordSearchController
+from typing import Set
+
+
 
 class GameRoom:
     """Représente une salle de jeu avec ses joueurs connectés."""
@@ -30,6 +33,9 @@ class GameRoom:
         self._timeout_task: asyncio.Task | None = None
         self._db_session = db_session
         self._controller = WordSearchController(game_id,db_session,redis_conn)
+
+        # Nouveaux attributs pour la synchronisation
+        self._ready_players: Set[str] = set()
 
     @property
     def game_id(self) -> str:
@@ -169,53 +175,123 @@ class GameRoom:
         state = WordSearchState.model_validate_json(json_state)
         
         return state.model_dump()
+    
+    # ─────────────────────────────────────────────────────────────────────────
+    # PHASE 1 : Préparation
+    # ─────────────────────────────────────────────────────────────────────────
 
-    async def start_countdown(self, countdown_seconds: int = 3) -> None:
-        """Déclenche le compte à rebours avant le début de la partie."""
-        self._state = GameStatus.STARTING_COUNTDOWN
+    async def prepare_game(self, game_data: dict) -> None:
+        """
+        Envoie les données de jeu à tous les joueurs.
+        Les clients doivent répondre "player_ready" quand ils sont prêts.
+        """
+        game_data = await self._get_game_state()
+        self._state = GameStatus.PREPARING
+        self._ready_players.clear()
 
+        # Envoyer à tous les joueurs
         await self.broadcast({
-            "type": GameStatus.STARTING_COUNTDOWN.value,
-            "message": f"Partie prête ! Démarrage dans {countdown_seconds} secondes...",
-            "countdown": countdown_seconds,
+            "type": "prepare_game",
+            "game_data": game_data,  # Grille, mots à trouver, thème...
+            "message": "Chargement de la partie...",
         })
 
-        print(f"⏳ [{self._game_id}] Compte à rebours: {countdown_seconds}s")
-        await asyncio.sleep(countdown_seconds)
+    def mark_player_ready(self, player_id: str) -> None:
+        """Marque un joueur comme prêt."""
+        if player_id in self._players:
+            self._ready_players.add(player_id)
+            print(f"✅ [{self._game_id}] {player_id} est prêt ({len(self._ready_players)}/{self._max_players})")
 
-    async def start_game(self, redis_conn: AsyncRedis, game_id: str) -> None:
-        """Démarre la partie et notifie tous les joueurs avec l'état complet."""
+    def all_players_ready(self) -> bool:
+        """Vérifie si tous les joueurs sont prêts."""
+        return len(self._ready_players) >= self._max_players
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # PHASE 2 : Démarrage synchronisé
+    # ─────────────────────────────────────────────────────────────────────────
+
+    async def wait_for_all_ready(self, timeout_seconds: float = 10.0) -> bool:
+        """
+        Attend que tous les joueurs soient prêts.
+        
+        Returns:
+            True si tous prêts, False si timeout
+        """
+        elapsed = 0.0
+        check_interval = 0.1  # Vérifier toutes les 100ms
+        
+        while elapsed < timeout_seconds:
+            if self.all_players_ready():
+                return True
+            await asyncio.sleep(check_interval)
+            elapsed += check_interval
+        
+        return False
+
+    async def start_synchronized(self, countdown_seconds: int = 3) -> None:
+        """
+        Démarre la partie de manière synchronisée pour tous les joueurs.
+        """
+        # 1. Countdown
+        self._state = GameStatus.STARTING_COUNTDOWN
+        
+        for remaining in range(countdown_seconds, 0, -1):
+            await self.broadcast({
+                "type": "countdown",
+                "seconds": remaining,
+            })
+            await asyncio.sleep(1)
+
+        # 2. Calcul du timestamp de démarrage
+        # Ajouter un petit délai pour compenser la latence réseau
+        from datetime import time
+        start_timestamp = time.time() + 0.1  # Démarre dans 100ms
+
+        # 3. Envoyer le signal de démarrage avec timestamp
         self._state = GameStatus.GAME_IN_PROGRESS
+        
+        await self.broadcast({
+            "type": GameStatus.GAME_START.value,
+            "start_timestamp": start_timestamp,
+            "duration_seconds": self._controller.GAME_DURATION_SECONDS,  # 3 minutes
+        })
 
-        # Récupérer l'état du jeu depuis Redis
-        game_state = await self._get_game_state(redis_conn, game_id)
+        self._timeout_task = asyncio.create_task(self._handle_game_timeout())
 
-        # Envoyer un message personnalisé à chaque joueur
-        for player_id in list(self._players.keys()):
-            opponent_id = self.get_opponent_id(player_id)
+        print(f"🚀 [{self._game_id}] Partie démarrée à {start_timestamp}")
 
-            message = {
-                "type": GameStatus.GAME_IN_PROGRESS.value,
-                "message": "GO! La partie a commencé.",
-                "you": player_id,
-                "opponent": opponent_id,
-                "timer": self.GAME_DURATION_SECONDS,
-            }
+    # ─────────────────────────────────────────────────────────────────────────
+    # FLOW COMPLET
+    # ─────────────────────────────────────────────────────────────────────────
 
-            # Inclure l'état du jeu si disponible
-            if game_state:
-                message.update(game_state)
+    async def handle_game_start(self, game_data: dict) -> bool:
+        """
+        Gère le flow complet de démarrage synchronisé.
+        
+        Returns:
+            True si la partie a démarré, False sinon
+        """
+        # Phase 1 : Envoyer les données
+        await self.prepare_game(game_data)
 
-            await self.send_to_player(player_id, message)
+        # Phase 2 : Attendre que tous soient prêts
+        all_ready = await self.wait_for_all_ready(timeout_seconds=10)
 
-        print(f"🚀 [{self._game_id}] Partie démarrée!")
+        if not all_ready:
+            # Timeout - certains joueurs n'ont pas répondu
+            await self.broadcast({
+                "type": "error",
+                "message": "Tous les joueurs ne sont pas prêts. Annulation.",
+            })
+            return False
 
-        # Démarrer le timer de fin de partie
-        self._timeout_task = asyncio.create_task(
-            self._handle_game_timeout(redis_conn, game_id)
-        )
+        # Phase 3 : Countdown + démarrage
+        await self.start_synchronized(countdown_seconds=3)
+        return True
 
-    async def _handle_game_timeout(self, redis_conn: AsyncRedis, game_id: str) -> None:
+
+    
+    async def _handle_game_timeout(self) -> None:
         """Gère la fin du temps imparti."""
         try:
             await asyncio.sleep(self.GAME_DURATION_SECONDS)
@@ -227,15 +303,6 @@ class GameRoom:
         except asyncio.CancelledError:
             print(f"⏰ [{self._game_id}] Timer annulé")
 
-    async def handle_game_start(
-        self, 
-        redis_conn: AsyncRedis, 
-        game_id: str,
-        countdown_seconds: int = 3,
-    ) -> None:
-        """Gère le démarrage complet: countdown puis start."""
-        await self.start_countdown(countdown_seconds)
-        await self.start_game(redis_conn, game_id)
 
     async def end_game(self, winner_id: str | None = None, reason: str = "finished") -> None:
         """Termine la partie et notifie les joueurs."""

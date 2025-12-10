@@ -2,9 +2,7 @@
 // Constantes minimales pour définir la zone de dessin
 export const LINE_THICKNESS = 30; // Épaisseur de la ligne en pixels
 export const CELL_SIZE = 50;
-export const GRID_SIZE = 10;
-export const CANVAS_SIZE = CELL_SIZE * GRID_SIZE;
-
+export const GAP_SIZE = 4
 export const RAINBOW_COLORS = [
     'rgba(255, 0, 0, 0.5)', // Rouge
     'rgba(255, 165, 0, 0.5)', // Orange

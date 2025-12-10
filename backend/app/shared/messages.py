@@ -23,6 +23,8 @@ class GameStatus(str, Enum):
     
     # Démarrage
     STARTING_COUNTDOWN = "starting_countdown"
+
+    PREPARING ="preparing"
     
     # En cours
     IN_PROGRESS = "in_progress"
