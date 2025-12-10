@@ -30,6 +30,11 @@ interface MatchmakingButtonProps {
   setShowLoginModal:React.Dispatch<React.SetStateAction<boolean>>
 }
 
+interface WSTokenResponse {
+  ws_token: string,
+  expires_in: number
+}
+
 // =============================================================================
 // API FUNCTIONS
 // =============================================================================
@@ -78,6 +83,9 @@ const matchmakingApi = {
 
   reset: (token: string) =>
     apiRequest<{ status: string }>("/matchmaking/reset", token, "POST"),
+
+  ws_auth:( token:string) => 
+      apiRequest<WSTokenResponse>("/ws-auth",token,"POST")
 };
 
 // =============================================================================
@@ -161,14 +169,24 @@ export default function MatchmakingButton({ token,game_name,isAuthenticated,setS
 
       if (response.status === "match_found" && response.game_id) {
         // Match trouvé !
+
+        
         clearInterval(intervalId);
         setMessage("Joueur trouvé !");
 
         console.log("✅ Match trouvé:", response);
 
+        const ws_token_response = await matchmakingApi.ws_auth(token)
+
+        if (!ws_token_response) {
+          console.warn("Erreur lors de la génération du token websocket");
+          return;
+        }
+        const ws_token=ws_token_response.ws_token
+        const game_id = response.game_id
         // Petite pause pour afficher le message
         setTimeout(() => {
-          navigate(`/game/${game_name}/${response.game_id}`);
+          navigate(`/game/${game_name}/${game_id}/${ws_token}`);
         }, 500);
       }
     }, 1000);

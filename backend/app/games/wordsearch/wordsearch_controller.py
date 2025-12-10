@@ -11,8 +11,7 @@ from app.models.tables import GameSession, WordList
 from app.games.constants import GameStatus
 from .wordsearch_engine import WordSearchEngine
 from .wordsearch_generator import WordSearchGenerator
-from .redis_keys import redis_state_key,redis_solution_key
-
+from app.games.constants import GAME_STATE_KEY_PREFIX,SOLUTION_KEY_PREFIX
 
 async def get_random_wordlist(session: AsyncSession) -> Optional[WordList]:
     query = select(WordList).order_by(func.random()).limit(1)
@@ -70,8 +69,8 @@ class WordSearchController:
         try:
             # db_session.add(new_session)
             # await db_session.commit()
-            await redis_client.set(redis_state_key(game_id), initial_state.model_dump_json())
-            await redis_client.set(redis_solution_key(game_id),solutions.model_dump_json())
+            await redis_client.set(f"{GAME_STATE_KEY_PREFIX}{game_id}", initial_state.model_dump_json())
+            await redis_client.set(f"{SOLUTION_KEY_PREFIX}{game_id}",solutions.model_dump_json())
         except Exception:
             # await db_session.rollback()
             return None

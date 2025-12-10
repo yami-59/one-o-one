@@ -13,9 +13,9 @@ from app.core.redis import RedisDep
 from app.core.db import SessionDep
 from app.games.gameRoom import GameRoom
 from app.games.constants import GameStatus,GameMessages
-from app.games.wordsearch.redis_keys import redis_state_key
 from app.auth.lib import TokenDep, get_current_user_id
 from sqlmodel.ext.asyncio.session import AsyncSession
+from app.games.constants import GAME_STATE_KEY_PREFIX
 
 router = APIRouter(tags=["websocket"])
 
@@ -38,44 +38,47 @@ class WsTokenResponse(SQLModel):
 # -----------------------------------------------------------------
 
 
-# @router.post("/ws-auth", response_model=WsTokenResponse, status_code=status.HTTP_200_OK)
-# async def websocket_auth_exchange(
-#     token: TokenDep,
-#     redis_conn: RedisDep,
-# ):
-#     """Échange le JWT contre un token éphémère pour l'accès WebSocket."""
-#     player_id = get_current_user_id(token)
+@router.post("/ws-auth", response_model=WsTokenResponse, status_code=status.HTTP_200_OK)
+async def websocket_auth_exchange(
+    token: TokenDep,
+    redis_conn: RedisDep,
+):
+    """Échange le JWT contre un token éphémère pour l'accès WebSocket."""
+    player_id = get_current_user_id(token)
 
-#     # Générer un token aléatoire (uuid4 est plus sécurisé que uuid1)
-#     ws_token = str(uuid1())
+    from uuid import uuid1
+    # Générer un token aléatoire (uuid4 est plus sécurisé que uuid1)
+    ws_token = str(uuid1())
 
-#     # Stocker l'association token -> player_id avec expiration
-#     await redis_conn.set(
-#         f"{WS_TOKEN_PREFIX}{ws_token}",
-#         player_id,
-#         ex=WS_TOKEN_EXPIRE_SECONDS,
-#     )
+    # Stocker l'association token -> player_id avec expiration
+    await redis_conn.set(
+        f"{WS_TOKEN_PREFIX}{ws_token}",
+        player_id,
+        ex=WS_TOKEN_EXPIRE_SECONDS,
+    )
 
-#     return WsTokenResponse(ws_token=ws_token)
+    return WsTokenResponse(ws_token=ws_token)
 
 
-# @router.post("/ws-refresh", response_model=WsTokenResponse, status_code=status.HTTP_200_OK)
-# async def refresh_ws_token(
-#     token: TokenDep,
-#     redis_conn: RedisDep,
-# ):
-#     """Génère un nouveau token WebSocket éphémère."""
-#     player_id = get_current_user_id(token)
+@router.post("/ws-refresh", response_model=WsTokenResponse, status_code=status.HTTP_200_OK)
+async def refresh_ws_token(
+    token: TokenDep,
+    redis_conn: RedisDep,
+):
+    """Génère un nouveau token WebSocket éphémère."""
+    player_id = get_current_user_id(token)
 
-#     new_ws_token = str(uuid1())
+    from uuid import uuid1
 
-#     await redis_conn.set(
-#         f"{WS_TOKEN_PREFIX}{new_ws_token}",
-#         player_id,
-#         ex=WS_TOKEN_EXPIRE_SECONDS,
-#     )
+    new_ws_token = str(uuid1())
 
-#     return WsTokenResponse(ws_token=new_ws_token)
+    await redis_conn.set(
+        f"{WS_TOKEN_PREFIX}{new_ws_token}",
+        player_id,
+        ex=WS_TOKEN_EXPIRE_SECONDS,
+    )
+
+    return WsTokenResponse(ws_token=new_ws_token)
 
 
 # -----------------------------------------------------------------
@@ -83,27 +86,27 @@ class WsTokenResponse(SQLModel):
 # -----------------------------------------------------------------
 
 
-# async def validate_ws_token(redis_conn, ws_token: str) -> str | None:
-#     """
-#     Valide le token WebSocket et retourne le player_id.
-#     Retourne None si le token est invalide ou expiré.
-#     """
-#     if not ws_token:
-#         return None
+async def validate_ws_token(redis_conn, ws_token: str) -> str | None:
+    """
+    Valide le token WebSocket et retourne le player_id.
+    Retourne None si le token est invalide ou expiré.
+    """
+    if not ws_token:
+        print("ws_token inexistant")
+        return None
 
-#     player_id = await redis_conn.get(f"{WS_TOKEN_PREFIX}{ws_token}")
+    player_id = await redis_conn.get(f"{WS_TOKEN_PREFIX}{ws_token}")
 
-#     if not player_id:
-#         return None
 
-#     # Décoder si bytes
-#     if isinstance(player_id, bytes):
-#         player_id = player_id.decode("utf-8")
+    if not player_id:
+        print("ws_token expiré")
+        return None
 
-#     # Supprimer le token après utilisation (one-time use)
-#     await redis_conn.delete(f"{WS_TOKEN_PREFIX}{ws_token}")
+    # Décoder si bytes
+    if isinstance(player_id, bytes):
+        player_id = player_id.decode("utf-8")
 
-#     return player_id
+    return player_id
 
 
 async def get_game_session(session: SessionDep, game_id: str) -> GameSession | None:
@@ -136,7 +139,7 @@ async def get_game_state_from_redis(
     Récupère l'état du jeu depuis Redis.
     Retourne None si l'état n'existe pas.
     """
-    state_key = redis_state_key(game_id)
+    state_key = GAME_STATE_KEY_PREFIX + game_id
     json_state = await redis_conn.get(state_key)
     
     if not json_state:
@@ -190,12 +193,12 @@ async def websocket_endpoint(
     game_id: str,
     redis_conn: RedisDep,
     session: SessionDep,
-    player_id: Annotated[str | None, Query(alias="playerId")] = None,
+    ws_token: Annotated[str | None, Query(alias="ws_token")] = None,
 ):
     """Gère la connexion WebSocket pour une partie de mots mêlés."""
 
-    # # 1. Validation du token WebSocket
-    # player_id = await validate_ws_token(redis_conn, token)
+    # 1. Validation du token WebSocket
+    player_id = await validate_ws_token(redis_conn, ws_token)
 
     if not player_id:
         await websocket.close(

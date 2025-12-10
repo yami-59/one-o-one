@@ -6,11 +6,10 @@ from typing import Any
 from fastapi import WebSocket, WebSocketDisconnect
 from redis.asyncio import Redis as AsyncRedis
 from .constants import GameStatus
-from .wordsearch.redis_keys import redis_state_key
 from sqlmodel.ext.asyncio.session import AsyncSession
 from app.games.wordsearch.wordsearch_controller import WordSearchController
 from typing import Set
-
+from app.games.constants import GAME_STATE_KEY_PREFIX
 
 
 class GameRoom:
@@ -163,7 +162,7 @@ class GameRoom:
         """Récupère l'état du jeu depuis Redis pour le broadcast."""
         from app.models.schemas import WordSearchState
         
-        state_key = redis_state_key(self._game_id)
+        state_key = GAME_STATE_KEY_PREFIX + self._game_id
         json_state = await self._redis_conn.get(state_key)
         
         if not json_state:

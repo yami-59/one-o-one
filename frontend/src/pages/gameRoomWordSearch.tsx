@@ -11,12 +11,11 @@ function GameRoomWordSearch() {
 
     // 1. Récupération des paramètres de l'URL (Game ID) et du token temporaire
     const params = useParams();
-    const { gameId } = params; // Le gameId est une chaîne extraite de l'URL
+    const { gameId,wsToken } = params; // Le gameId est une chaîne extraite de l'URL
 
     
     // 2. 🎯 CONSOMMATION DU CONTEXTE D'AUTHENTIFICATION
     const { 
-        token, 
         userInfo, 
         isLoading, 
         isAuthenticated 
@@ -42,7 +41,7 @@ function GameRoomWordSearch() {
         return  <Loading/>;
     }
     
-    if (!isAuthenticated || !gameId || !userInfo || !token ) {
+    if (!isAuthenticated || !gameId || !userInfo || !wsToken ) {
         return <div className="flex h-screen w-screen items-center justify-center text-red-400 bg-gray-900">Erreur critique: Données de session manquantes.</div>;
     }
 
@@ -58,6 +57,7 @@ function GameRoomWordSearch() {
                 <WordSearch 
                     gameId={gameId} 
                     user={userInfo}
+                    ws_token={wsToken}
                 />
             </div>
             

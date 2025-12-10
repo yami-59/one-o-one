@@ -7,7 +7,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from app.models.schemas import WordSearchState, WordSolution, Index,WordSearchSolutionData
 from app.models.tables import GameSession, User
 from app.games.constants import GameStatus
-from app.games.wordsearch.redis_keys import redis_state_key,redis_solution_key
+from app.games.constants import GAME_STATE_KEY_PREFIX,SOLUTION_KEY_PREFIX
 
 
 class WordSearchEngine:
@@ -29,7 +29,7 @@ class WordSearchEngine:
     async def _get_solution_data(self) -> WordSearchSolutionData:
         """Récupère les solutions depuis Redis (avec cache)."""
         if self._solution_data_cache is None:
-            json_data = await self._redis.get(redis_solution_key(self._game_id))
+            json_data = await self._redis.get(f"{SOLUTION_KEY_PREFIX}{self._game_id}")
             if not json_data:
                 raise ValueError(f"Solutions non trouvées pour {self._game_id}.")
             self._solution_data_cache = WordSearchSolutionData.model_validate_json(json_data)
@@ -41,7 +41,7 @@ class WordSearchEngine:
 
     async def _get_game_state(self) -> WordSearchState:
         """Récupère l'état actuel de la partie depuis Redis."""
-        json_state = await self._redis.get(redis_state_key(self._game_id))
+        json_state = await self._redis.get(f"{GAME_STATE_KEY_PREFIX}{self._game_id}")
 
         if not json_state:
             raise ValueError(f"État de partie {self._game_id} non trouvé dans Redis.")
@@ -51,7 +51,7 @@ class WordSearchEngine:
     async def _save_game_state(self, state: WordSearchState) -> None:
         """Sauvegarde l'état actuel de la partie dans Redis."""
         json_state = state.model_dump_json()
-        await self._redis.set(redis_state_key(self._game_id), json_state)
+        await self._redis.set(f"{GAME_STATE_KEY_PREFIX}{self._game_id}", json_state)
 
     @staticmethod
     def _calculate_direction(start: Index, end: Index) -> tuple[int, int, int]:
@@ -200,7 +200,7 @@ class WordSearchEngine:
             return {"status": "error", "detail": f"Échec DB: {e}"}
 
         # 4. Nettoyage Redis
-        await self._redis.delete(redis_state_key(self._game_id))
+        await self._redis.delete(f"{GAME_STATE_KEY_PREFIX}{self._game_id}")
 
         return {
             "status": GameStatus.GAME_FINISHED,

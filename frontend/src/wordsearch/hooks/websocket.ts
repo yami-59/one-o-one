@@ -63,7 +63,7 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 // HOOK
 // =============================================================================
 
-export const useWebSocket = (user: UserProps, gameId: string): UseWebSocketReturn => {
+export const useWebSocket = (user: UserProps, gameId: string,ws_token:string): UseWebSocketReturn => {
     const [ws, setWs] = useState<WebSocket | null>(null);
     const [status, setStatus] = useState<WebSocketStatusType>(WebSocketStatus.DISCONNECTED);
     const [gameState, setGameState] = useState<WordSearchData | null>(null);
@@ -216,7 +216,7 @@ export const useWebSocket = (user: UserProps, gameId: string): UseWebSocketRetur
             return;
         }
 
-        const wsUrl = `${baseUrl}/wordsearch/${gameId}?playerId=${user.user_id}`;
+        const wsUrl = `${baseUrl}/wordsearch/${gameId}?ws_token=${ws_token}`;
         console.log(`[WS] 🔄 Connecting to ${wsUrl}...`);
 
         try {

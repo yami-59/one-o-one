@@ -1,12 +1,19 @@
 import { useState } from 'react';
 import { Send } from 'lucide-react';
+import { CELL_SIZE,GAP_SIZE } from '../constants';
+import Div from '../../components/divWrapper';
+
 
 interface SidePanelProps {
   wordsToFind: string[];
   wordsFound: string[];
+  gridSize:number
 }
 
-export default function SidePanel({ wordsToFind, wordsFound }: SidePanelProps) {
+export default function SidePanel({ wordsToFind, wordsFound,gridSize }: SidePanelProps) {
+  
+  const totalSize = gridSize * CELL_SIZE + (gridSize - 1) * GAP_SIZE;
+  
   const [activeTab, setActiveTab] = useState<'words' | 'chat'>('words');
   const [message, setMessage] = useState('');
 
@@ -22,7 +29,7 @@ export default function SidePanel({ wordsToFind, wordsFound }: SidePanelProps) {
   };
 
   return (
-    <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden flex flex-col h-[500px] lg:h-auto">
+    <div className="bg-gray-800 border border-gray-700 rounded-xl overflow-hidden flex flex-col  lg:h-auto">
       {/* Onglets */}
       <div className="flex border-b border-gray-700">
         <button
@@ -48,7 +55,7 @@ export default function SidePanel({ wordsToFind, wordsFound }: SidePanelProps) {
       </div>
 
       {/* Contenu */}
-      <div className="grow p-4 bg-gray-900/50 max-h-150">
+      <Div style={{height:`${totalSize}px`}}  className="p-4 bg-gray-900/50 overflow-y-scroll">
         {activeTab === 'words' ? (
           <div className="space-y-2 ">
             {wordsToFind.map((word, i) => {
@@ -64,11 +71,11 @@ export default function SidePanel({ wordsToFind, wordsFound }: SidePanelProps) {
                   }`}
                 >
                   <span>{word}</span>
-                  {isFound && i === 0 && (
+                  {/* {isFound && i === 0 && (
                     <span className="text-xs bg-brand-pink text-white px-1 rounded">
                       MOI
                     </span>
-                  )}
+                  )} */}
                 </div>
               );
             })}
@@ -83,7 +90,7 @@ export default function SidePanel({ wordsToFind, wordsFound }: SidePanelProps) {
             </div>
           </div>
         )}
-      </div>
+      </Div>
 
       {/* Input chat */}
       {activeTab === 'chat' && (

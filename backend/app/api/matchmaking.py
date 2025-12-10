@@ -2,17 +2,16 @@
 import json
 from typing import Any, Dict
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, status
 from pydantic import BaseModel
 
 from app.core.redis import RedisDep
 from app.games.constants import Games
 from app.auth.lib import TokenDep, get_current_user_id
+from app.games.constants import MATCH_NOTIFICATION_PREFIX,QUEUE_KEY_PREFIX
 
 router = APIRouter(prefix="/matchmaking", tags=["matchmaking"])
 
-QUEUE_BASE_NAME = "matchmaking:queue:"
-MATCH_NOTIFICATION_PREFIX = "match_notification:"
 
 
 class QueueRequest(BaseModel):
@@ -34,7 +33,7 @@ class MatchResponse(BaseModel):
 
 
 def _get_queue_key(game_name: Games) -> str:
-    return f"{QUEUE_BASE_NAME}{game_name.value}"
+    return f"{QUEUE_KEY_PREFIX}{game_name.value}"
 
 
 def _decode_if_bytes(value: bytes | str) -> str:

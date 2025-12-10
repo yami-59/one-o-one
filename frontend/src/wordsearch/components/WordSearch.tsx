@@ -7,6 +7,7 @@ import { useCanvasDrawing } from '../hooks/canvas';
 import { useWebSocket, WebSocketStatus } from '../hooks/websocket';
 import { type UserProps } from '../../auth/AuthContext';
 import type { WordSolution } from '../types';
+import { useNavigate } from 'react-router-dom';
 
 // =============================================================================
 // TYPES
@@ -15,18 +16,21 @@ import type { WordSolution } from '../types';
 interface WordSearchProps {
     user: UserProps;
     gameId: string;
+    ws_token:string
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-const WordSearch = ({ user, gameId }: WordSearchProps) => {
+const WordSearch = ({ user, gameId ,ws_token}: WordSearchProps) => {
     // ─────────────────────────────────────────────────────────────────────────
     // HOOKS
     // ─────────────────────────────────────────────────────────────────────────
 
-    const { ws, status, gameState } = useWebSocket(user, gameId);
+    const { ws, status, gameState } = useWebSocket(user, gameId,ws_token);
+
+    const navigate = useNavigate()
 
     const solutionsFound: WordSolution[] = useMemo(() => {
         if (!gameState?.words_found) return [];
@@ -61,14 +65,22 @@ const WordSearch = ({ user, gameId }: WordSearchProps) => {
 
     if (status === WebSocketStatus.ERROR) {
         return (
-            <div className="flex min-h-[60vh] w-full items-center justify-center">
-                <div className="flex flex-col items-center space-y-4 text-red-400">
-                    <p className="text-xl">❌ Erreur de connexion</p>
+            <div className="flex flex-col min-h-[60vh] w-full items-center justify-center space-y-10">
+                <p className="text-xl">❌ Erreur de connexion</p>
+                <div className="flex flex-row items-center justify-center space-x-5 text-red-400  ">
+                    
                     <button
                         onClick={() => window.location.reload()}
                         className="rounded-lg bg-red-600 px-6 py-3 font-bold text-white hover:bg-red-700 transition-colors"
                     >
                         Réessayer
+                    </button>
+         
+                    <button
+                        onClick={() => navigate('/lobby')}
+                        className="rounded-lg bg-green-600 px-6 py-3 font-bold text-white hover:bg-green-700 transition-colors"
+                    >
+                        Retour au lobby
                     </button>
                 </div>
             </div>
@@ -93,25 +105,24 @@ const WordSearch = ({ user, gameId }: WordSearchProps) => {
 
 
     return (
-        <div className="w-full max-w-7xl mx-auto px-4 py-6">
-          
-
+        <div className="w-fit mx-auto px-4 py-6">
             {/* ─────────────────────────────────────────────────────────────────
                 MAIN : Grille + Panel
             ───────────────────────────────────────────────────────────────── */}
-            <div className="flex flex-col lg:flex-row gap-6 items-start justify-center">
+            <div className="flex flex-col lg:flex-row gap-6 items-center justify-center ">
                 {/* Grille de jeu (centre) */}
-                <div className="order-2 lg:order-1">
+                <div className="order-1 lg:order-1">
                     {gameState.grid_data.length > 0 && (
                         <GameGrid gridData={gameState.grid_data} {...canvasProps} />
                     )}
                 </div>
 
                 {/* Panel latéral (droite sur desktop, bas sur mobile) */}
-                <div className="order-1 lg:order-2 w-full lg:w-72">
+                <div className="order-2 lg:order-2 w-full lg:w-72">
                     <SidePanel
                         wordsToFind={gameState.words_to_find}
                         wordsFound={allWordsFound}
+                        gridSize={gameState.grid_data.length}
                     />
                 </div>
             </div>

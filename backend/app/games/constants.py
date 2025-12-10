@@ -1,6 +1,15 @@
 from enum import Enum
 
 
+QUEUE_KEY_PREFIX = "matchmaking:queue:"
+
+GAME_STATE_KEY_PREFIX = "game:state:"
+
+SOLUTION_KEY_PREFIX = "game:solution:"
+
+MATCH_NOTIFICATION_PREFIX = "match_notification:"
+
+
 class GameStatus(str, Enum):
     WAITING_FOR_PLAYERS = "waiting_for_players"
     GAME_START = "game_start"
@@ -26,7 +35,6 @@ class GameMessages(str, Enum):
     SELECTION_UPDATE = "selection_update"  # Mise à jour des coordonnées (aperçu en temps réel)
     WORD_FOUND_SUCCESS = "word_found_success"  # Mot trouvé, rayer la liste
     GAME_STATE="game_state"
-
 
     # Statuts d'Erreur
     ERROR = "error"

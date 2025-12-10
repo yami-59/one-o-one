@@ -3,8 +3,12 @@
 // import SidePanel from "./SidePanel";
 import { useGameSync } from "../hooks/useGameSync";
 
-export function GameScreen({ ws }: { ws: WebSocket }) {
+
+
+
+export function GameScreen({ ws ,game_name}: { ws: WebSocket , game_name:string}) {
     const { gameData, countdown, isGameStarted, timeRemaining } = useGameSync(ws);
+    console.log(game_name)
 
     // ─────────────────────────────────────────────────────────────────────────
     // État : Chargement
