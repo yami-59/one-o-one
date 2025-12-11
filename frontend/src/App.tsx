@@ -25,7 +25,7 @@ function App() {
                 {/*La route racine "/" est définie pour afficher HomePage */}
                 {/* <Route path="/" element={<Exemple />} /> */}
                 {/* La route est définie avec un paramètre dynamique nommé ':gameId' */}
-                <Route path="/game/wordsearch/:gameId/:wsToken" element={<GameRoomWordSearch />} />
+                <Route path="/game/:gameName/:gameId/:wsToken" element={<GameRoomWordSearch />} />
             </Routes>
         </BrowserRouter>
     );

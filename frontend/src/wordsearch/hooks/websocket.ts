@@ -63,7 +63,7 @@ const MAX_RECONNECT_ATTEMPTS = 3;
 // HOOK
 // =============================================================================
 
-export const useWebSocket = (user: UserProps, gameId: string,ws_token:string): UseWebSocketReturn => {
+export const useWebSocket = (userInfo: UserProps|null, gameId: string|undefined,ws_token:string|undefined,game_name:string|undefined): UseWebSocketReturn|null => {
     const [ws, setWs] = useState<WebSocket | null>(null);
     const [status, setStatus] = useState<WebSocketStatusType>(WebSocketStatus.DISCONNECTED);
     const [gameState, setGameState] = useState<WordSearchData | null>(null);
@@ -207,6 +207,10 @@ export const useWebSocket = (user: UserProps, gameId: string,ws_token:string): U
             wsRef.current.close();
         }
 
+        if(!ws_token || !userInfo || !gameId || !game_name){
+            return 
+        }
+
         setStatus(WebSocketStatus.CONNECTING);
 
         const baseUrl = import.meta.env.VITE_WS_BASE_URL;
@@ -216,7 +220,7 @@ export const useWebSocket = (user: UserProps, gameId: string,ws_token:string): U
             return;
         }
 
-        const wsUrl = `${baseUrl}/wordsearch/${gameId}?ws_token=${ws_token}`;
+        const wsUrl = `${baseUrl}/${game_name}/${gameId}?ws_token=${ws_token}`;
         console.log(`[WS] 🔄 Connecting to ${wsUrl}...`);
 
         try {
@@ -233,7 +237,7 @@ export const useWebSocket = (user: UserProps, gameId: string,ws_token:string): U
                 newWs.send(
                     JSON.stringify({
                         type: "ready",
-                        player_id: user.user_id,
+                        player_id: userInfo.user_id,
                     })
                 );
             };
@@ -271,7 +275,7 @@ export const useWebSocket = (user: UserProps, gameId: string,ws_token:string): U
             console.error('[WS] ❌ WebSocket creation error:', error);
             setStatus(WebSocketStatus.ERROR);
         }
-    }, [user, gameId, handleMessage]);
+    }, [userInfo, gameId, handleMessage,ws_token,game_name]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // EFFECT

@@ -1,10 +1,12 @@
 import { Volume2, VolumeX } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 // import GameGrid from '../wordsearch/components/GameGrid';
 import Navbar from '../components/Navbar';
 import Scoreboard from '../components/Scoreboard';
-
+import Loading from './Loading';
+import { useAuth } from '../auth/AuthContext';
+import { useWebSocket } from '../wordsearch/hooks/websocket';
 // Simulation de sons (API Audio du navigateur)
 const playSound = (type: 'pop' | 'success' | 'win') => {
   const audio = new Audio(`/sounds/${type}.mp3`);
@@ -13,6 +15,21 @@ const playSound = (type: 'pop' | 'success' | 'win') => {
 };
 
 export default function GamePage() {
+
+
+    const { 
+        userInfo, 
+        isLoading, 
+        isAuthenticated 
+    } = useAuth();
+
+
+  const params = useParams();
+  const { gameName,gameId,wsToken } = params; // Le gameId est une chaîne extraite de l'URL
+
+  const { ws, status, gameState } = useWebSocket(userInfo, gameId,wsToken,gameName);
+
+
   const navigate = useNavigate();
   
   // État du jeu
@@ -43,6 +60,18 @@ export default function GamePage() {
   const handleGridClick = () => {
     if (soundEnabled) playSound('pop');
   };
+
+
+   // --- 4. Affichage Conditionnel ---
+
+    if (isLoading) {
+        return  <Loading/>;
+    }
+    
+    if (!isAuthenticated || !gameId || !userInfo || !wsToken ) {
+        return <div className="flex h-screen w-screen items-center justify-center text-red-400 bg-gray-900">Erreur critique: Données de session manquantes.</div>;
+    }
+
 
   return (
     <div className="min-h-screen flex flex-col relative">

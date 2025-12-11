@@ -16,34 +16,47 @@ import { useNavigate } from 'react-router-dom';
 interface WordSearchProps {
     user: UserProps;
     gameId: string;
-    ws_token:string
+    ws_token: string;
+    game_name: string;
 }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
-const WordSearch = ({ user, gameId ,ws_token}: WordSearchProps) => {
+const WordSearch = ({ user, gameId, ws_token, game_name }: WordSearchProps) => {
     // ─────────────────────────────────────────────────────────────────────────
     // HOOKS
     // ─────────────────────────────────────────────────────────────────────────
 
-    const { ws, status, gameState } = useWebSocket(user, gameId,ws_token);
+    const navigate = useNavigate();
 
-    const navigate = useNavigate()
+    // WebSocket hook
+    const webSocketResult = useWebSocket(user, gameId, ws_token, game_name);
 
+    // Extraire les valeurs du hook (avec valeurs par défaut si null)
+    const ws = webSocketResult?.ws ?? null;
+    const status = webSocketResult?.status ?? WebSocketStatus.CONNECTING;
+    const gameState = webSocketResult?.gameState ?? null;
+
+    // Extraire les solutions trouvées
     const solutionsFound: WordSolution[] = useMemo(() => {
         if (!gameState?.words_found) return [];
-        return Object.values(gameState.words_found).flat();
+
+        // Flatten et typer correctement
+        const allSolutions = Object.values(gameState.words_found).flat();
+        return allSolutions as WordSolution[];
     }, [gameState?.words_found]);
 
+    // Hook de dessin Canvas
     const canvasProps = useCanvasDrawing(
-        gameState?.grid_data || [],
+        gameState?.grid_data ?? [],
         solutionsFound,
         ws,
         user.user_id
     );
 
+    // Liste des mots trouvés (strings uniquement)
     const allWordsFound = useMemo(() => {
         return solutionsFound.map((sol) => sol.word);
     }, [solutionsFound]);
@@ -67,15 +80,14 @@ const WordSearch = ({ user, gameId ,ws_token}: WordSearchProps) => {
         return (
             <div className="flex flex-col min-h-[60vh] w-full items-center justify-center space-y-10">
                 <p className="text-xl">❌ Erreur de connexion</p>
-                <div className="flex flex-row items-center justify-center space-x-5 text-red-400  ">
-                    
+                <div className="flex flex-row items-center justify-center space-x-5 text-red-400">
                     <button
                         onClick={() => window.location.reload()}
                         className="rounded-lg bg-red-600 px-6 py-3 font-bold text-white hover:bg-red-700 transition-colors"
                     >
                         Réessayer
                     </button>
-         
+
                     <button
                         onClick={() => navigate('/lobby')}
                         className="rounded-lg bg-green-600 px-6 py-3 font-bold text-white hover:bg-green-700 transition-colors"
@@ -102,23 +114,19 @@ const WordSearch = ({ user, gameId ,ws_token}: WordSearchProps) => {
     // RENDER
     // ─────────────────────────────────────────────────────────────────────────
 
-
-
     return (
         <div className="w-fit mx-auto px-4 py-6">
-            {/* ─────────────────────────────────────────────────────────────────
-                MAIN : Grille + Panel
-            ───────────────────────────────────────────────────────────────── */}
-            <div className="flex flex-col lg:flex-row gap-6 items-center justify-center ">
-                {/* Grille de jeu (centre) */}
-                <div className="order-1 lg:order-1">
+            {/* MAIN : Grille + Panel */}
+            <div className="flex flex-col lg:flex-row gap-6 items-center justify-center">
+                {/* Grille de jeu */}
+                <div className="order-1">
                     {gameState.grid_data.length > 0 && (
                         <GameGrid gridData={gameState.grid_data} {...canvasProps} />
                     )}
                 </div>
 
-                {/* Panel latéral (droite sur desktop, bas sur mobile) */}
-                <div className="order-2 lg:order-2 w-full lg:w-72">
+                {/* Panel latéral */}
+                <div className="order-2 w-full lg:w-72">
                     <SidePanel
                         wordsToFind={gameState.words_to_find}
                         wordsFound={allWordsFound}
@@ -126,8 +134,6 @@ const WordSearch = ({ user, gameId ,ws_token}: WordSearchProps) => {
                     />
                 </div>
             </div>
-
-           
         </div>
     );
 };

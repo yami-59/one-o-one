@@ -11,7 +11,7 @@ function GameRoomWordSearch() {
 
     // 1. Récupération des paramètres de l'URL (Game ID) et du token temporaire
     const params = useParams();
-    const { gameId,wsToken } = params; // Le gameId est une chaîne extraite de l'URL
+    const { gameName,gameId,wsToken } = params; // Le gameId est une chaîne extraite de l'URL
 
     
     // 2. 🎯 CONSOMMATION DU CONTEXTE D'AUTHENTIFICATION
@@ -58,6 +58,7 @@ function GameRoomWordSearch() {
                     gameId={gameId} 
                     user={userInfo}
                     ws_token={wsToken}
+                    game_name={gameName}
                 />
             </div>
             
