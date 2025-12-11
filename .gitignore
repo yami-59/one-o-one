@@ -72,3 +72,7 @@ temp/
 .next/
 .vercel/
 .firebase/
+
+
+
+!.env.local
