@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { type UserProps } from '../../auth/AuthContext';
 import type { WordSolution } from '../types';
 import { GameMessages, GameStatus } from '../constants';
-
+import { type WordSearchData } from '../types';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -18,31 +18,7 @@ export const WebSocketStatus = {
 
 export type WebSocketStatusType = (typeof WebSocketStatus)[keyof typeof WebSocketStatus];
 
-// Interface de base commune à tous les jeux
-export interface GameBaseData {
-  // Score en temps réel (toujours nécessaire)
-  realtime_score: Record<string, number>; // {player_id: score_actuel}
 
-  // Données spécifiques au joueur (ex: prêt à jouer, vies restantes, etc.)
-  player_data: Record<string, object>; // {player_id: {statut_specifique}}
-
-  game_duration?: number;   // durée totale du jeu (en secondes)
-  time_remaining?: number;  // temps restant
-}
-
-// Interface spécifique au jeu de mots mêlés
-export interface WordSearchData extends GameBaseData {
-  theme: string;
-
-  // Grille de lettres
-  grid_data: string[][]; // tableau 2D de lettres
-
-  // Liste des mots à trouver
-  words_to_find: string[];
-
-  // Mots trouvés par joueur
-  words_found: Record<string, WordSolution[]>; 
-}
 
 
 export interface UseWebSocketReturn {

@@ -17,7 +17,8 @@ class GameStatus(str, Enum):
     GAME_INITIALIZED = "game_initialized"
     GAME_FINISHED = "game_finished"
     GAME_CLOSED = "game_closed"
-    STARTING_COUNTDOWN = "starting_coutdown"
+    STARTING_COUNTDOWN = "starting_countdown"
+    PREPARING="prepare_game"
 
 
 class Games(str, Enum):
@@ -35,6 +36,7 @@ class GameMessages(str, Enum):
     SELECTION_UPDATE = "selection_update"  # Mise à jour des coordonnées (aperçu en temps réel)
     WORD_FOUND_SUCCESS = "word_found_success"  # Mot trouvé, rayer la liste
     GAME_STATE="game_state"
+    SCORE_UPDATE="score_update"
 
     # Statuts d'Erreur
     ERROR = "error"

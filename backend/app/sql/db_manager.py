@@ -31,7 +31,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 load_dotenv(".env.local")
 
 # Import des modèles pour que SQLModel les connaisse
-from app.models.tables import User, GameSession, WordList
+from app.models.tables import *
 from app.models.schemas import *
 from app.core.db import engine
 

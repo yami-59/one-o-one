@@ -24,6 +24,7 @@ interface MatchFoundResponse {
 }
 
 interface MatchmakingButtonProps {
+  title?: string;
   token: string|null;
   game_name:string;
   isAuthenticated:boolean,
@@ -92,7 +93,7 @@ const matchmakingApi = {
 // COMPONENT
 // =============================================================================
 
-export default function MatchmakingButton({ token,game_name,isAuthenticated,setShowLoginModal }: MatchmakingButtonProps) {
+export default function MatchmakingButton({ token,game_name,isAuthenticated,setShowLoginModal ,title}: MatchmakingButtonProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [message, setMessage] = useState("En attente d'un joueur...");
   const [isLoading, setIsLoading] = useState(false);
@@ -176,17 +177,10 @@ export default function MatchmakingButton({ token,game_name,isAuthenticated,setS
 
         console.log("✅ Match trouvé:", response);
 
-        const ws_token_response = await matchmakingApi.ws_auth(token)
-
-        if (!ws_token_response) {
-          console.warn("Erreur lors de la génération du token websocket");
-          return;
-        }
-        const ws_token=ws_token_response.ws_token
         const game_id = response.game_id
         // Petite pause pour afficher le message
         setTimeout(() => {
-          navigate(`/game/${game_name}/${game_id}/${ws_token}`);
+          navigate(`/game/${game_name}/${game_id}/`);
         }, 500);
       }
     }, 1000);
@@ -203,7 +197,7 @@ export default function MatchmakingButton({ token,game_name,isAuthenticated,setS
   // =============================================================================
 
   return (
-    <div className="flex flex-row items-center gap-3">
+    <div className="flex flex-row items-center w-fit gap-4">
       {/* Bouton Play / Searching */}
       <button
           onClick={handleSearchGame}
@@ -227,10 +221,9 @@ export default function MatchmakingButton({ token,game_name,isAuthenticated,setS
             <span className="text-sm">{message}</span>
           </>
         ) : (
-          <span className="text-sm"> Rechercher une partie </span>
+          <span className="text-sm"> {title || 'Rechercher une partie'} </span>
         )}
       </button>
-
       {/* Bouton Annuler */}
       {isSearching && (
         <button

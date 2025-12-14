@@ -1,40 +1,48 @@
 # /backend/app/games/gameRoom.py
 
 import asyncio
-from typing import Any
+from typing import Any, Set
 
 from fastapi import WebSocket, WebSocketDisconnect
 from redis.asyncio import Redis as AsyncRedis
-from .constants import GameStatus
 from sqlmodel.ext.asyncio.session import AsyncSession
+
+from app.games.constants import GameStatus, GAME_STATE_KEY_PREFIX
 from app.games.wordsearch.wordsearch_controller import WordSearchController
-from typing import Set
-from app.games.constants import GAME_STATE_KEY_PREFIX
 
 
 class GameRoom:
     """Représente une salle de jeu avec ses joueurs connectés."""
 
-    GAME_DURATION_SECONDS = 180  # 3 minutes
 
     def __init__(
-        self, 
-        game_id: str, 
-        redis_conn: AsyncRedis ,
-        db_session:AsyncSession,
+        self,
+        game_id: str,
+        redis_conn: AsyncRedis,
+        db_session: AsyncSession,
         max_players: int = 2,
     ):
         self._game_id = game_id
-        self._players: dict[str, dict[str,Any]] = {}  # {player_id: websocket}
+        self._players: dict[str, dict[str, Any]] = {}
         self._state: GameStatus = GameStatus.WAITING_FOR_PLAYERS
         self._max_players = max_players
         self._redis_conn = redis_conn
         self._timeout_task: asyncio.Task | None = None
         self._db_session = db_session
-        self._controller = WordSearchController(game_id,db_session,redis_conn)
+        self._controller = WordSearchController(game_id, db_session, redis_conn)
 
-        # Nouveaux attributs pour la synchronisation
+        # Synchronisation
         self._ready_players: Set[str] = set()
+        self._game_data: dict | None = None
+
+        # 🎯 NOUVEAU: Tracking des joueurs connus (même déconnectés)
+        self._known_players: Set[str] = set()
+        self._start_timestamp: float | None = None
+
+
+    # =========================================================================
+    # PROPERTIES
+    # =========================================================================
 
     @property
     def game_id(self) -> str:
@@ -53,70 +61,92 @@ class GameRoom:
         return list(self._players.keys())
 
     def is_full(self) -> bool:
-        """Vérifie si la salle a atteint sa capacité maximale."""
         return self.player_count >= self._max_players
 
     def is_empty(self) -> bool:
-        """Vérifie si la salle est vide."""
         return self.player_count == 0
 
-    def add_player(self, player_id: str, websocket: WebSocket,username:str) -> bool:
-        """
-        Ajoute un joueur à la salle.
-        Retourne False si la salle est pleine ou si le joueur est déjà présent.
-        """
-        if self.is_full():
+    # =========================================================================
+    # PLAYER MANAGEMENT
+    # =========================================================================
+
+    def add_player(self, player_id: str, websocket: WebSocket, username: str) -> bool:
+        if self.is_full() or player_id in self._players:
             return False
-        if player_id in self._players:
-            return False
-        
-        player = self._players.setdefault(player_id, {})
-        player["websocket"] = websocket
-        player["username"] = username
-        
-        print(f"🎮 [{self._game_id}] Joueur {username} a rejoint ({self.player_count}/{self._max_players})")
+
+        self._players[player_id] = {
+            "websocket": websocket,
+            "username": username,
+        }
+
+        self._known_players.add(player_id)
+        print(f"🎮 [{self._game_id}] {username} a rejoint ({self.player_count}/{self._max_players})")
         return True
+    
+    def is_known_player(self, player_id: str) -> bool:
+        """Vérifie si le joueur a déjà participé à cette partie."""
+        return player_id in self._known_players
+
+    def is_reconnection(self, player_id: str) -> bool:
+        """
+        Vérifie si c'est une reconnexion.
+        True si: joueur connu ET partie déjà démarrée (pas en WAITING)
+        """
+        return (
+            player_id in self._known_players
+            and self._state != GameStatus.WAITING_FOR_PLAYERS
+        )
 
     def remove_player(self, player_id: str) -> bool:
-        """Retire un joueur de la salle."""
         if player_id in self._players:
             del self._players[player_id]
-            print(f"🚪 [{self._game_id}] Joueur {player_id} a quitté")
+            self._ready_players.discard(player_id)
+            print(f"🚪 [{self._game_id}] Joueur {player_id} retiré de la game room")
             return True
         return False
 
     def get_player_socket(self, player_id: str) -> WebSocket | None:
-        """Récupère le WebSocket d'un joueur."""
-        if self._players.get(player_id) :
-            return self._players.get[player_id].get('websocket')
+        player = self._players.get(player_id)
+        return player.get("websocket") if player else None
+
+    def get_username(self, player_id: str) -> str | None:
+        player = self._players.get(player_id)
+        return player.get("username") if player else None
 
     def get_opponent_id(self, player_id: str) -> str | None:
-        """Trouve l'ID de l'adversaire."""
         for pid in self._players:
             if pid != player_id:
                 return pid
         return None
-    
-    def get_username(self,player_id)-> str:
-        return self._players[player_id]['username']
-    
-    def get_opponent_username(self,player_id:str) -> str|None:
 
-        for pid in self._players:
-            if pid != player_id and self._players.get(player_id) : 
-                return self._players[pid]['username']
+    def get_opponent_info(self, player_id: str) -> dict | None:
+        opponent_id = self.get_opponent_id(player_id)
+        if not opponent_id:
+            return None
+        return {
+            "id": opponent_id,
+            "username": self.get_username(opponent_id),
+        }
+    
+    def _calculate_time_remaining(self) -> int:
+        """
+        Calcule le temps restant en secondes.
+        Utilisé pour les reconnexions afin de synchroniser le timer.
+        """
+        if not self._start_timestamp:
+            return self._controller.GAME_DURATION_SECONDS
+        
+        import time
+        elapsed = time.time() - self._start_timestamp
+        remaining = max(0, self._controller.GAME_DURATION_SECONDS - elapsed)
+        return int(remaining)
 
-        return None
+    # =========================================================================
+    # MESSAGING
+    # =========================================================================
 
     async def send_to_player(self, player_id: str, message: dict[str, Any]) -> bool:
-        """
-        Envoie un message à un joueur spécifique.
-        Retourne False si l'envoi échoue.
-        """
-        websocket=None
-        if self._players.get(player_id) :
-             websocket = self._players.get(player_id).get("websocket")
-        
+        websocket = self.get_player_socket(player_id)
         if not websocket:
             return False
 
@@ -132,200 +162,271 @@ class GameRoom:
             return False
 
     async def broadcast(self, message: dict[str, Any]) -> list[str]:
-        """
-        Envoie un message à tous les joueurs.
-        Retourne la liste des player_ids qui ont échoué.
-        """
         failed: list[str] = []
-
-        for player_id in list(self._players.keys()):  # Copie pour éviter mutation pendant itération
-            success = await self.send_to_player(player_id, message)
-            if not success:
-                failed.append(player_id)
-
-        return failed
-
-    async def broadcast_except(self, message: dict[str, Any], exclude_player_id: str) -> list[str]:
-        """Envoie un message à tous sauf un joueur."""
-        failed: list[str] = []
-
         for player_id in list(self._players.keys()):
-            if player_id == exclude_player_id:
-                continue
-            success = await self.send_to_player(player_id, message)
-            if not success:
+            if not await self.send_to_player(player_id, message):
                 failed.append(player_id)
-
         return failed
+
+    async def broadcast_except(self, message: dict[str, Any], exclude: str) -> list[str]:
+        failed: list[str] = []
+        for player_id in list(self._players.keys()):
+            if player_id != exclude:
+                if not await self.send_to_player(player_id, message):
+                    failed.append(player_id)
+        return failed
+
+    # =========================================================================
+    # GAME STATE
+    # =========================================================================
 
     async def _get_game_state(self) -> dict | None:
-        """Récupère l'état du jeu depuis Redis pour le broadcast."""
         from app.models.schemas import WordSearchState
-        
+
         state_key = GAME_STATE_KEY_PREFIX + self._game_id
         json_state = await self._redis_conn.get(state_key)
-        
+
         if not json_state:
             return None
-        
+
         if isinstance(json_state, bytes):
             json_state = json_state.decode("utf-8")
-        
+
         state = WordSearchState.model_validate_json(json_state)
-        
         return state.model_dump()
-    
-    # ─────────────────────────────────────────────────────────────────────────
-    # PHASE 1 : Préparation
-    # ─────────────────────────────────────────────────────────────────────────
 
-    async def prepare_game(self, game_data: dict) -> None:
-        """
-        Envoie les données de jeu à tous les joueurs.
-        Les clients doivent répondre "player_ready" quand ils sont prêts.
-        """
-        game_data = await self._get_game_state()
-        self._state = GameStatus.PREPARING
-        self._ready_players.clear()
+    # =========================================================================
+    # FLOW PRINCIPAL
+    # =========================================================================
 
-        # Envoyer à tous les joueurs
-        await self.broadcast({
-            "type": "prepare_game",
-            "game_data": game_data,  # Grille, mots à trouver, thème...
-            "message": "Chargement de la partie...",
+    async def on_player_connected(self, player_id: str) -> None:
+        """
+        Appelé quand un joueur se connecte.
+        Gère tout le flow de connexion.
+        """
+        # 1. Envoyer l'état d'attente au joueur
+        await self.send_to_player(player_id, {
+            "type": "waiting_for_opponent",
+            "message": "En attente d'un adversaire...",
+            "player_count": self.player_count,
+            "max_players": self._max_players,
         })
 
-    def mark_player_ready(self, player_id: str) -> None:
-        """Marque un joueur comme prêt."""
-        if player_id in self._players:
-            self._ready_players.add(player_id)
-            print(f"✅ [{self._game_id}] {player_id} est prêt ({len(self._ready_players)}/{self._max_players})")
+        # 2. Notifier les autres qu'un joueur a rejoint
+        await self.broadcast_except({
+            "type": "player_joined",
+            "player_id": player_id,
+            "username": self.get_username(player_id),
+            "player_count": self.player_count,
+        }, exclude=player_id)
 
-    def all_players_ready(self) -> bool:
-        """Vérifie si tous les joueurs sont prêts."""
-        return len(self._ready_players) >= self._max_players
+        # 3. Si room pleine → démarrer la préparation
+        if self.is_full():
+            await self._start_preparation_phase()
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # PHASE 2 : Démarrage synchronisé
-    # ─────────────────────────────────────────────────────────────────────────
 
-    async def wait_for_all_ready(self, timeout_seconds: float = 10.0) -> bool:
-        """
-        Attend que tous les joueurs soient prêts.
-        
-        Returns:
-            True si tous prêts, False si timeout
-        """
-        elapsed = 0.0
-        check_interval = 0.1  # Vérifier toutes les 100ms
-        
-        while elapsed < timeout_seconds:
-            if self.all_players_ready():
-                return True
-            await asyncio.sleep(check_interval)
-            elapsed += check_interval
-        
-        return False
 
-    async def start_synchronized(self, countdown_seconds: int = 3) -> None:
+    async def on_player_reconnected(self, player_id: str) -> None:
+            """
+            Gère la reconnexion d'un joueur.
+            Renvoie l'état actuel sans refaire le flow complet.
+            """
+            username = self.get_username(player_id)
+
+            # Récupérer l'état actuel du jeu
+            game_data = await self._get_game_state()
+            opponent_info = self.get_opponent_info(player_id)
+
+            # Calculer le temps restant si partie en cours
+            time_remaining = None
+            if self._state == GameStatus.GAME_IN_PROGRESS:
+                time_remaining = self._calculate_time_remaining()
+
+            
+            # Envoyer l'état complet de reconnexion
+            await self.send_to_player(player_id, {
+                "type": "reconnected",
+                "status": self._state.value,
+                "game_data": game_data,
+
+                "opponent": opponent_info,
+                "start_timestamp": self._start_timestamp,
+                "time_remaining": time_remaining,
+                "duration_seconds": self._controller.GAME_DURATION_SECONDS,
+            })
+
+            # Notifier l'adversaire de la reconnexion
+            await self.broadcast_except({
+                "type": "opponent_reconnected",
+                "player_id": player_id,
+                "username": username,
+            }, exclude=player_id)
+
+            # # Si la partie était en cours mais pausée (adversaire déconnecté),
+            # # on peut la reprendre
+            # if self._state == GameStatus.GAME_IN_PROGRESS and self.is_full():
+            #     await self.broadcast({
+            #         "type": "game_resumed",
+            #         "message": "La partie reprend !",
+            #     })
+
+    async def _start_preparation_phase(self) -> None:
         """
-        Démarre la partie de manière synchronisée pour tous les joueurs.
+        Phase 1: Envoie les données de jeu à tous les joueurs.
+        Attend que tous répondent "player_ready".
         """
-        # 1. Countdown
+        print(f"🎮 [{self._game_id}] Room pleine, démarrage de la préparation...")
+
+        self._state = GameStatus.PREPARING
+        self._ready_players.clear()
+        self._game_data = await self._get_game_state()
+
+        if not self._game_data:
+            await self.broadcast({"type": "error", "message": "Erreur: données de jeu introuvables"})
+            return
+
+        # Envoyer à chaque joueur ses données + info adversaire
+        for player_id in self._players:
+            opponent_info = self.get_opponent_info(player_id)
+
+            await self.send_to_player(player_id, {
+                "type": "prepare_game",
+                "game_data": self._game_data,
+                "opponent": {**opponent_info,"score":0},
+                "message": "Chargement de la partie...",
+            })
+
+        print(f"📤 [{self._game_id}] Données envoyées, en attente des confirmations...")
+
+    async def on_player_ready(self, player_id: str) -> None:
+        """
+        Appelé quand un joueur envoie "player_ready".
+        Si tous les joueurs sont prêts, démarre le countdown.
+        """
+        if self._state != GameStatus.PREPARING:
+            print(f"⚠️ [{self._game_id}] player_ready reçu mais état = {self._state}")
+            return
+
+        self._ready_players.add(player_id)
+        print(f"✅ [{self._game_id}] {self.get_username(player_id)} est prêt ({len(self._ready_players)}/{self._max_players})")
+
+        # Notifier les autres
+        await self.broadcast_except({
+            "type": "opponent_ready",
+            "player_id": player_id,
+            "ready_count": len(self._ready_players),
+        }, exclude=player_id)
+
+        # Si tous prêts → démarrer le countdown
+        if len(self._ready_players) >= self._max_players:
+            await self._start_countdown_phase()
+
+    async def _start_countdown_phase(self, countdown_seconds: int = 3) -> None:
+        """
+        Phase 2: Countdown avant le début de la partie.
+        """
+        print(f"⏳ [{self._game_id}] Tous les joueurs sont prêts, countdown...")
+
         self._state = GameStatus.STARTING_COUNTDOWN
-        
+
         for remaining in range(countdown_seconds, 0, -1):
             await self.broadcast({
-                "type": "countdown",
+                "type": GameStatus.STARTING_COUNTDOWN.value,
                 "seconds": remaining,
             })
             await asyncio.sleep(1)
 
-        # 2. Calcul du timestamp de démarrage
-        # Ajouter un petit délai pour compenser la latence réseau
-        from datetime import time
-        start_timestamp = time.time() + 0.1  # Démarre dans 100ms
+        await self._start_game_phase()
 
-        # 3. Envoyer le signal de démarrage avec timestamp
+    async def _start_game_phase(self) -> None:
+        """Phase 3: Démarrage effectif de la partie."""
+        import time
+
         self._state = GameStatus.GAME_IN_PROGRESS
-        
+        self._start_timestamp = time.time()
+
         await self.broadcast({
-            "type": GameStatus.GAME_START.value,
-            "start_timestamp": start_timestamp,
-            "duration_seconds": self._controller.GAME_DURATION_SECONDS,  # 3 minutes
+            "type": "game_start",
+            "start_timestamp": self._start_timestamp,
+            "duration_seconds": self._controller.GAME_DURATION_SECONDS,
         })
 
-        self._timeout_task = asyncio.create_task(self._handle_game_timeout())
+        print(f"🚀 [{self._game_id}] Partie démarrée!")
 
-        print(f"🚀 [{self._game_id}] Partie démarrée à {start_timestamp}")
+        # Lancer le timeout en arrière-plan
+        self._timeout_task = self._controller.start_game()
 
-    # ─────────────────────────────────────────────────────────────────────────
-    # FLOW COMPLET
-    # ─────────────────────────────────────────────────────────────────────────
-
-    async def handle_game_start(self, game_data: dict) -> bool:
-        """
-        Gère le flow complet de démarrage synchronisé.
-        
-        Returns:
-            True si la partie a démarré, False sinon
-        """
-        # Phase 1 : Envoyer les données
-        await self.prepare_game(game_data)
-
-        # Phase 2 : Attendre que tous soient prêts
-        all_ready = await self.wait_for_all_ready(timeout_seconds=10)
-
-        if not all_ready:
-            # Timeout - certains joueurs n'ont pas répondu
-            await self.broadcast({
-                "type": "error",
-                "message": "Tous les joueurs ne sont pas prêts. Annulation.",
-            })
-            return False
-
-        # Phase 3 : Countdown + démarrage
-        await self.start_synchronized(countdown_seconds=3)
-        return True
-
+        try:
+            result = await self._timeout_task
+            if result:
+                print(f"⏱️ [{self._game_id}] Timeout result: {result}")
+                await self._end_game(result)
+        except asyncio.CancelledError:
+            print(f"⏹️ [{self._game_id}] Timeout annulé")
+        except Exception as e:
+            print(f"❌ [{self._game_id}] Erreur timeout: {e}")
 
     
-    async def _handle_game_timeout(self) -> None:
-        """Gère la fin du temps imparti."""
-        try:
-            await asyncio.sleep(self.GAME_DURATION_SECONDS)
-            
-            if self._state == GameStatus.GAME_IN_PROGRESS:
-                print(f"⏰ [{self._game_id}] Temps écoulé!")
-                await self.end_game(reason="timeout")
-                
-        except asyncio.CancelledError:
-            print(f"⏰ [{self._game_id}] Timer annulé")
+    
+    # =========================================================================
+    # GAME END
+    # =========================================================================
 
 
-    async def end_game(self, winner_id: str | None = None, reason: str = "finished") -> None:
+    async def _end_game(self, result: dict) -> None:
         """Termine la partie et notifie les joueurs."""
+        print("end game")
+
         self._state = GameStatus.GAME_FINISHED
 
-        # Annuler le timer si actif
+        # 🎯 Annuler le timeout si encore actif
         if self._timeout_task and not self._timeout_task.done():
             self._timeout_task.cancel()
 
+        # 🎯 Correction: utiliser winner_id au lieu de winner
+        winner_id = result.get('winner_id')
+        scores = result.get('scores', {})
+        reason = result.get('reason', 'unknown')
+
+        # Récupérer le username du gagnant
+        winner_username = None
+        if winner_id:
+            winner_username = self.get_username(winner_id)
+
         await self.broadcast({
-            "type": GameStatus.GAME_FINISHED.value,
+            "type": "game_finished",
             "reason": reason,
-            "winner": winner_id,
+            "winner_id": winner_id,
+            "winner_username": winner_username,
+            "scores": scores,
         })
 
-        print(f"🏆 [{self._game_id}] Partie terminée. Gagnant: {winner_id or 'match nul'}")
+        print(f"🏆 [{self._game_id}] Partie terminée. Gagnant: {winner_username or 'match nul'}")
+
+    # async def on_player_disconnected(self, player_id: str) -> None:
+    #     """Appelé quand un joueur se déconnecte."""
+    #     self.remove_player(player_id)
+
+    #     if self._state == GameStatus.GAME_IN_PROGRESS:
+    #         # Donner la victoire à l'adversaire
+    #         opponent_id = self.get_opponent_id(player_id)
+    #         await self._end_game(winner_id=opponent_id, reason="opponent_disconnected")
+    #     else:
+    #         # Notifier les autres
+    #         await self.broadcast({
+    #             "type": "player_disconnected",
+    #             "player_id": player_id,
+    #         })
 
     async def close_all_connections(self) -> None:
         """Ferme toutes les connexions WebSocket."""
-        for player_id, websocket in list(self._players.items()):
-            try:
-                await websocket.close()
-            except Exception:
-                pass
+        for player_id in list(self._players.keys()):
+            websocket = self.get_player_socket(player_id)
+            if websocket:
+                try:
+                    await websocket.close()
+                except Exception:
+                    pass
             self.remove_player(player_id)
 
         print(f"🔌 [{self._game_id}] Toutes les connexions fermées")

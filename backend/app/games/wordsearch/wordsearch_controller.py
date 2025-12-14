@@ -20,7 +20,7 @@ async def get_random_wordlist(session: AsyncSession) -> Optional[WordList]:
 
 
 class WordSearchController:
-    GAME_DURATION_SECONDS : int  = 180
+    GAME_DURATION_SECONDS : int  = 300
 
     def __init__(
         self,
@@ -55,7 +55,8 @@ class WordSearchController:
             grid_data=grid_data,
             words_to_find=words_to_find,
             current_status=GameStatus.GAME_INITIALIZED,
-            game_duration=cls.GAME_DURATION_SECONDS
+            game_duration=cls.GAME_DURATION_SECONDS,
+            realtime_score={p1_id:0,p2_id:0}
         )
 
         new_session = GameSession(
@@ -80,23 +81,21 @@ class WordSearchController:
     async def _schedule_timeout(self):
         try:
             await asyncio.sleep(self.GAME_DURATION_SECONDS)
-            await self._engine.finalize_game()
-            await self._redis_client.publish(
-                f"game_channel:{self._game_id}",
-                '{"type": "timeout", "message": "Le temps est écoulé!"}'
-            )
+            result = await self._engine.finalize_game("timeout")
+            return result 
         except asyncio.CancelledError:
             pass
 
-    def start_game(self) -> dict:
-        self._timeout_task = asyncio.create_task(self._schedule_timeout())
-        return {
-            "status": GameStatus.GAME_IN_PROGRESS,
-            "timer": self.GAME_DURATION_SECONDS,
-        }
+    def start_game(self) -> asyncio.Task[Dict[str, Any] | None]:
+        task = asyncio.create_task(self._schedule_timeout())
+        return task  
 
     async def process_player_action(
         self, player_id: str, selected_data: Dict[str, Any]
     ) -> Dict[str, Any]:
         selected_obj = WordSolution.model_validate(selected_data)
         return await self._engine.validate_selection(player_id, selected_obj)
+    
+    async def check_game_completed(self):
+
+        await self._engine.check_all_solutions_found()

@@ -2,15 +2,16 @@
 
 import { LogOut, Shield, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../auth/AuthContext';
 import Title from './Title';
+import {type  AuthContextValue } from '../auth/AuthContext';
 // =============================================================================
 // COMPONENT
 // =============================================================================
+export interface NavbarProps extends AuthContextValue{setShowLoginModal?: React.Dispatch<React.SetStateAction<boolean>> }
 
-export default function Navbar({setShowLoginModal} : {setShowLoginModal?: React.Dispatch<React.SetStateAction<boolean>> }) {
+
+export default function Navbar({setShowLoginModal,logout,isAuthenticated,userInfo} : NavbarProps) {
     const navigate = useNavigate();
-    const { isAuthenticated, userInfo, logout } = useAuth();
 
 
     // ─────────────────────────────────────────────────────────────────────────

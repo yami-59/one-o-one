@@ -29,8 +29,6 @@ class MatchResponse(BaseModel):
     game_id: str | None = None
     game_name: str | None = None
     opponent_id: str | None = None
-    initial_state: Dict[str, Any] | None = None
-
 
 def _get_queue_key(game_name: Games) -> str:
     return f"{QUEUE_KEY_PREFIX}{game_name.value}"
@@ -111,7 +109,6 @@ async def check_match(
         game_id=match_data.get("game_id"),
         game_name=match_data.get("game_name"),
         opponent_id=match_data.get("opponent_id"),
-        initial_state=match_data.get("initial_state"),
     )
 
 

@@ -3,7 +3,7 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { CELL_SIZE,GAP_SIZE, LINE_THICKNESS } from '../constants';
 import { getGridIndex, getRandomRainbowColor, construct_word } from '../lib';
-import { type Position, type WordSolution, type GridIndexes } from '../types';
+import { type Position, type WordSolution, type GridIndexes, type WordSearchData } from '../types';
 import { GameMessages } from '../constants';
 
 // =============================================================================
@@ -83,6 +83,7 @@ const getPlayerColor = (playerIndex: number): string => {
  * @param playerId - ID du joueur actuel (optionnel, pour différencier les couleurs)
  */
 export const useCanvasDrawing = (
+    setGameData:React.Dispatch<React.SetStateAction<unknown>>,
     gridData: string[][],
     solutionsFound: WordSolution[],
     ws: WebSocket | null,
@@ -256,6 +257,7 @@ export const useCanvasDrawing = (
         foundWordsPositions,
         getContext,
         drawLine,
+        CANVAS_SIZE
     ]);
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -269,8 +271,6 @@ export const useCanvasDrawing = (
             try {
                 const data = JSON.parse(event.data);
 
-                // Ignore own messages if echoed back
-                if (data.from === playerId) return;
 
                 switch (data.type) {
                     case GameMessages.SELECTION_UPDATE:
@@ -286,6 +286,38 @@ export const useCanvasDrawing = (
                         }
                         console.log(`selection update de ${data.from}`)
                         break;
+                        // WORD FOUND
+                    // ─────────────────────────────────────────────────────────────
+                    case 'word_found':
+                    case GameMessages.WORD_FOUND_SUCCESS:
+                        console.log('[WS] ✅ Word found:', data.new_solution.word, 'by', data.found_by);    
+                        setGameData((prev:WordSearchData) => {
+                            if (!prev) return null;
+
+                            // Créer la solution à ajouter
+                            const newSolution: WordSolution = data.new_solution
+
+                            // Mettre à jour words_found
+                            const updatedWordsFound = { ...prev.words_found };
+                            const playerWords = updatedWordsFound[data.found_by] || [];
+                            updatedWordsFound[data.found_by] = [...playerWords, newSolution];
+
+                            // Mettre à jour les scores
+                            const updatedScores = { ...prev.realtime_score };
+                            if (data.new_score !== undefined) {
+                                updatedScores[data.found_by] = data.new_score;
+                            }
+
+                            console.log(updatedScores)
+                            console.log(updatedWordsFound)
+
+                            return {
+                                ...prev,
+                                words_found: updatedWordsFound,
+                                realtime_score: updatedScores,
+                            };
+                        });
+                        break;
 
                     case 'selection_reset':
                     case 'reset':
@@ -294,9 +326,6 @@ export const useCanvasDrawing = (
                         setMyOpponentWord('');
                         break;
 
-                    // Other message types handled elsewhere
-                    default:
-                        break;
                 }
             } catch (error) {
                 console.error('[Canvas] Error parsing message:', error);
@@ -305,7 +334,7 @@ export const useCanvasDrawing = (
 
         ws.addEventListener('message', handleMessage);
         return () => ws.removeEventListener('message', handleMessage);
-    }, [ws, gridData, playerId, calculateWord]);
+    }, [ws, gridData, playerId, calculateWord,setGameData]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // MOUSE HANDLERS
@@ -340,7 +369,7 @@ export const useCanvasDrawing = (
                 color: myColor,
             });
         },
-        [gridData, myColor, calculateWord, sendImmediate]
+        [gridData, myColor, calculateWord, sendImmediate,CANVAS_SIZE]
     );
 
     const handleMouseMove = useCallback(
@@ -370,7 +399,7 @@ export const useCanvasDrawing = (
                 color: myColor,
             });
         },
-        [isDrawing, myPosition, gridData, myColor, calculateWord, sendThrottled]
+        [isDrawing, myPosition, gridData, myColor, calculateWord, sendThrottled,CANVAS_SIZE]
     );
 
     const handleMouseUp = useCallback(
@@ -435,3 +464,12 @@ export const useCanvasDrawing = (
 };
 
 export default useCanvasDrawing;
+
+
+/*
+
+// ─────────────────────────────────────────────────────────────
+                
+
+
+*/

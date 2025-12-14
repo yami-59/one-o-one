@@ -5,7 +5,7 @@ interface Props {
   p1Score: number;
   p2Name: string;
   p2Score: number;
-  timer: string;
+  timer: string | null;
 }
 
 export default function Scoreboard({ p1Name, p1Score, p2Name, p2Score, timer }: Props) {

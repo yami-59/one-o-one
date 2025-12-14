@@ -16,13 +16,19 @@ import { type Position ,type GridIndex} from "../wordsearch/types";
 export enum GameStatus {
     // Initialisation
     INITIALIZED = 'initialized',
+    CONNECTING = 'connecting',
     WAITING_FOR_PLAYERS = 'waiting_for_players',
+    WAITING_FOR_OPPONENT = 'waiting_for_opponent',
+
 
     // Démarrage
     STARTING_COUNTDOWN = 'starting_countdown',
 
+    PREPARING = 'preparing',
+
+
     // En cours
-    IN_PROGRESS = 'in_progress',
+    IN_PROGRESS = 'game_in_progress',
 
     // Fin
     FINISHED = 'finished',
@@ -31,6 +37,10 @@ export enum GameStatus {
     // Erreur
     ERROR = 'error',
 }
+
+export type GameStatusType = GameStatus
+
+
 
 /**
  * Types de messages WebSocket échangés.
@@ -403,11 +413,14 @@ export function isGameOver(status: GameStatus): boolean {
 export function getStatusMessage(status: GameStatus): string {
     const messages: Record<GameStatus, string> = {
         [GameStatus.INITIALIZED]: 'Partie initialisée',
+        [GameStatus.WAITING_FOR_OPPONENT]:'En attente de l\'adversaire',
         [GameStatus.WAITING_FOR_PLAYERS]: 'En attente de joueurs...',
         [GameStatus.STARTING_COUNTDOWN]: 'La partie va commencer...',
         [GameStatus.IN_PROGRESS]: 'Partie en cours',
         [GameStatus.FINISHED]: 'Partie terminée',
         [GameStatus.CANCELLED]: 'Partie annulée',
+        [GameStatus.CONNECTING]: 'connection ...',
+        [GameStatus.PREPARING]: 'Préparation ...',
         [GameStatus.ERROR]: 'Erreur',
     };
     return messages[status] || 'Statut inconnu';

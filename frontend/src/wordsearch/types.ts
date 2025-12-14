@@ -1,3 +1,5 @@
+import { type GameBaseData } from "../Game/types/GameInterface";
+
 //Props
 export interface Point {
     x: number;
@@ -51,4 +53,20 @@ export interface WordSearchTableProps extends CanvaDrawingProps {
 
 export interface GameGridProps extends CanvaDrawingProps {
     gridData: string[][];
+}
+
+
+
+// Interface spécifique au jeu de mots mêlés
+export interface WordSearchData extends GameBaseData {
+  theme: string;
+
+  // Grille de lettres
+  grid_data: string[][]; // tableau 2D de lettres
+
+  // Liste des mots à trouver
+  words_to_find: string[];
+
+  // Mots trouvés par joueur
+  words_found: Record<string, WordSolution[]>; 
 }
