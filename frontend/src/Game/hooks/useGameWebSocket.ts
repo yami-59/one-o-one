@@ -6,7 +6,8 @@ import { GameStatus } from '../../shared/GameMessages';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const WS_URL = import.meta.env.VITE_WS_BASE_URL;
-
+// 🎯 Intervalle de ping (30 secondes)
+const PING_INTERVAL_MS = 30000;
 type GameData = {
   realtime_score: Record<string, number>;
   // ... autres champs
@@ -19,16 +20,55 @@ function getPlayerScore(gameData: GameData, playerId: string ): number {
   return gameData.realtime_score[playerId] ?? 0;
 }
 
+
+
+
+
+
+
 export function useGameWebSocket(game: GameContextValue) {
     const wsRef = useRef<WebSocket | null>(null);
     const isConnecting = useRef(false);
     const isConnected = useRef(false);
     const isMounted = useRef(false);  // 🎯 Track si vraiment monté
+    const pingIntervalRef = useRef<NodeJS | null>(null);  // 🎯 Référence pour le ping
+
+    // 🎯 Fonction pour démarrer le heartbeat
+    const startHeartbeat = useCallback((ws: WebSocket) => {
+        // Arrêter l'ancien intervalle si existant
+        if (pingIntervalRef.current) {
+            clearInterval(pingIntervalRef.current);
+        }
+
+        pingIntervalRef.current = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'ping' }));
+                console.log('💓 Ping envoyé');
+            }
+        }, PING_INTERVAL_MS);
+    }, []);
+
+    // 🎯 Fonction pour arrêter le heartbeat
+    const stopHeartbeat = useCallback(() => {
+        if (pingIntervalRef.current) {
+            clearInterval(pingIntervalRef.current);
+            pingIntervalRef.current = null;
+        }
+    }, []);
+
 
 
 
     const gameRef = useRef(game);
     gameRef.current = game;
+
+
+    // Ajouter un wrapper pour tracer tous les envois
+    const sendMessage = (ws: WebSocket, message: object) => {
+        const msgStr = JSON.stringify(message);
+        console.log(`📤 [${gameRef.current.me?.username}] Envoi:`, message);
+        ws.send(msgStr);
+    };
 
     const fetchWsToken = useCallback(async (): Promise<string | null> => {
         try {
@@ -109,6 +149,10 @@ export function useGameWebSocket(game: GameContextValue) {
             isConnected.current = true;
             wsRef.current = ws;
             gameRef.current.setWs(ws);
+            // 🎯 Démarrer le heartbeat
+            startHeartbeat(ws);
+
+            console.log(`✅ WebSocket connecté pour ${gameRef.current.me?.username} (${gameRef.current.me?.id})`);
         };
 
         ws.onclose = (event) => {
@@ -120,6 +164,9 @@ export function useGameWebSocket(game: GameContextValue) {
             if (isMounted.current) {
                 gameRef.current.setWs(null);
             }
+
+            // 🎯 Arrêter le heartbeat
+            stopHeartbeat();
 
             // 🎯 NE PAS reconnecter automatiquement
             // Les codes 1006 (erreur handshake) et 1008 (policy) ne doivent pas retry
@@ -141,6 +188,12 @@ export function useGameWebSocket(game: GameContextValue) {
                 const g = gameRef.current;
 
                 switch (data.type) {
+
+                    // 🎯 Répondre au pong du serveur (optionnel, pour debug)
+                    case 'pong':
+                        console.log('💓 Pong reçu');
+                        break;
+
                     case 'reconnected':
                         console.log('🔄 Reconnexion...');
                         
@@ -169,8 +222,7 @@ export function useGameWebSocket(game: GameContextValue) {
 
                         setTimeout(() => {
                             if (wsRef.current?.readyState === WebSocket.OPEN) {
-                                wsRef.current.send(JSON.stringify({ type: 'player_ready' }));
-                                console.log('✅ player_ready envoyé');
+                                sendMessage(wsRef.current,{type:'player_ready'})
                             }
                         }, 100);
                         break;
@@ -211,7 +263,7 @@ export function useGameWebSocket(game: GameContextValue) {
         };
 
         wsRef.current = ws;
-    }, [fetchWsToken]);
+    }, [fetchWsToken,startHeartbeat,stopHeartbeat]);
 
     useEffect(() => {
         console.log('🟢 useEffect: montage');
