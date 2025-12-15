@@ -1,12 +1,31 @@
+# ----------------------------------------------------------------------
+# FICHIER .gitignore POUR UN PROJET FULL-STACK (Node.js/Python/Web)
+# ----------------------------------------------------------------------
+
+# ==================================
+# 1. CORE FILES & VERSION CONTROL
+# ==================================
+
 # Ignore tous les fichiers et dossiers commençant par un point
 .*
+# Sauf les fichiers de configuration nécessaires au dépôt
 !.gitignore
 !.gitattributes
 !.gitkeep
 
+# === Git-related files ===
+.git/
+.git/hooks/*
+.git/info/exclude
+.git/logs/
+
 # === System files ===
 .DS_Store
 Thumbs.db
+
+# ==================================
+# 2. DEPENDANCES ET BUILD OUTPUTS
+# ==================================
 
 # === Node.js ===
 node_modules/
@@ -15,29 +34,72 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 package-lock.json
+pnpm-lock.yaml
 .pnpm-store/
 
-# === Build outputs ===
+# === Python / Environnement Virtuel ===
+# Environnements virtuels
+venv/
+.venv/
+env/
+.env/
+
+# Fichiers compilés
+__pycache__/
+*.pyc
+*.pyd
+*.so
+
+# Fichiers de test
+.pytest_cache/
+htmlcov/
+.coverage
+
+# === Build outputs (Common) ===
 dist/
 build/
 out/
-.next/
 .cache/
 coverage/
+
+# === React/Next.js specific ===
+.next/
+.vercel/
+.firebase/
+.turbo/
+out/
 
 # === TypeScript ===
 *.tsbuildinfo
 
+# ==================================
+# 3. FICHIERS SECRETS ET LOCAUX
+# ==================================
+
 # === Env files ===
 .env
-.env.* 
+.env.*
+# Exclure explicitement le fichier d'exemple si vous en avez un
 !.env.example
+
+# Fichiers de configuration spécifiques à l'utilisateur et non committables
+.env.local
+
+# === Clés/Secrets ===
+*.key
+*.pem
+*.p12
+
+# ==================================
+# 4. FICHIERS TEMPONAIRES ET LOGS
+# ==================================
 
 # === Logs ===
 logs/
 *.log
 *.log.*
 log.txt
+*.sqlite3 # Base de données SQLite locale, souvent utilisée en dev/test
 
 # === Temp files ===
 tmp/
@@ -49,6 +111,8 @@ temp/
 .vscode/
 .idea/
 *.swp
+*.bak
+*~
 
 # === OS Archives ===
 *.zip
@@ -56,23 +120,12 @@ temp/
 *.gz
 *.rar
 
-# === PDFs (selon ta demande) ===
-*.pdf
-
-# === Images cache ===
-.cache/
-.next/cache/
-
 # === Miscellaneous ===
 *.pid
 *.seed
 *.pid.lock
+*.sess
+*.json.bak
 
-# === React/Next.js specific ===
-.next/
-.vercel/
-.firebase/
-
-
-
-!.env.local
+# === Divers (selon votre demande) ===
+*.pdf

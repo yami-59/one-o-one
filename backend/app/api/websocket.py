@@ -271,9 +271,11 @@ async def websocket_endpoint(
     # 7. Boucle de réception des messages
     try:
         while True:
-
-
             data = await websocket.receive_json()
+
+            # 🎯 Log TOUS les messages reçus avec l'identité du joueur
+            print(f"📩 [{game_id}] Reçu de {user.username}: {data.get('type')}")
+
             await handle_player_message(room, player_id, data)
 
     except WebSocketDisconnect:
@@ -296,6 +298,10 @@ async def handle_player_message(
 
     
     match message_type:
+
+        case 'ping':
+            await room.send_to_player(player_id, {"type": "pong"})
+            return
 
         case 'player_ready':
             await room.on_player_ready(player_id)
