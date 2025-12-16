@@ -1,4 +1,4 @@
-import Div from '../../components/divWrapper';
+import Div from '../../components/DivWrapper';
 import { CELL_SIZE, GAP_SIZE } from '../constants';
 import { type GameGridProps } from '../types';
 

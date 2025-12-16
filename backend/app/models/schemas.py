@@ -37,10 +37,7 @@ class GameBaseState(SQLModel):
     # Score en temps réel (toujours nécessaire)
     realtime_score: Dict[str, int] = {}  # {player_id: score_actuel}
 
-
-    game_duration:int|None 
-    time_remaining:int|None = None
-
+    game_duration:int 
     
 
 

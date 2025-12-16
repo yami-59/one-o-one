@@ -18,23 +18,27 @@ class GameStatus(str, Enum):
     """Statuts possibles d'une partie."""
     
     # Initialisation
-    INITIALIZED = "initialized"
-    WAITING_FOR_PLAYERS = "waiting_for_players"
-    
-    # Démarrage
-    STARTING_COUNTDOWN = "starting_countdown"
+    INITIALIZED = 'initialized',
+    CONNECTING = 'connecting',
+    WAITING_FOR_PLAYERS = 'waiting_for_players',
+    WAITING_FOR_OPPONENT = 'waiting_for_opponent',
 
-    PREPARING ="preparing"
-    
+
+    # Démarrage
+    STARTING_COUNTDOWN = 'starting_countdown',
+
+    PREPARING = 'preparing',
+
+
     # En cours
-    IN_PROGRESS = "in_progress"
-    
+    IN_PROGRESS = 'in_progress',
+
     # Fin
-    FINISHED = "finished"
-    CANCELLED = "cancelled"
-    
+    FINISHED = 'finished',
+    CANCELLED = 'cancelled',
+
     # Erreur
-    ERROR = "error"
+    ERROR = 'error',
 
 
 class MessageType(str, Enum):

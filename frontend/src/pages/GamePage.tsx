@@ -1,144 +1,233 @@
+// /frontend/src/pages/GamePage.tsx
+
 import { Volume2, VolumeX } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect,useCallback,useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-// import GameGrid from '../wordsearch/components/GameGrid';
 import Navbar from '../components/Navbar';
 import Scoreboard from '../components/Scoreboard';
 import Loading from './Loading';
-import { useAuth } from '../auth/AuthContext';
-import { useWebSocket } from '../wordsearch/hooks/websocket';
-// Simulation de sons (API Audio du navigateur)
-const playSound = (type: 'pop' | 'success' | 'win') => {
-  const audio = new Audio(`/sounds/${type}.mp3`);
-  audio.play().catch(e => console.log("Audio play failed", e));
-  console.log(`🔊 Son joué : ${type}`);
+import { useAuth, type AuthContextValue } from '../auth/AuthContext';
+import GameOverlay from '../Game/components/GameOverlay';
+import { GameStatus } from '../shared/GameMessages';
+import { useGame } from '../Game/context/GameContext';
+import GameProvider from '../Game/context/GameProvider';
+import { getGameConfig, isValidGame } from '../Game/registry/gameRegistry';
+import { useGameWebSocket } from '../Game/hooks/useGameWebSocket';
+import { type GameBaseData } from '../Game/types/GameInterface';
+import { useGameTimer } from '../Game/hooks/useGameTimer';
+import { createPlaySound } from '../Game/types/GameInterface';
+
+
+
+// Helper pour formater le nom
+const formatPlayerName = (username: string | undefined, fallback: string): string => {
+    if (!username) return fallback;
+    return username.startsWith('guest-') ? 'guest' : username;
 };
 
-export default function GamePage() {
+// =============================================================================
+// INNER COMPONENT (avec accès au contexte)
+// =============================================================================
 
+function GamePageInner({ auth }: { auth: AuthContextValue }) {
+    const navigate = useNavigate();
+    const game = useGame();
+    const duration = game.gameData ? (game.gameData as GameBaseData).game_duration : null;
 
-    const { 
-        userInfo, 
-        isLoading, 
-        isAuthenticated 
-    } = useAuth();
-
-
-  const params = useParams();
-  const { gameName,gameId,wsToken } = params; // Le gameId est une chaîne extraite de l'URL
-
-  const { ws, status, gameState } = useWebSocket(userInfo, gameId,wsToken,gameName);
-
-
-  const navigate = useNavigate();
-  
-  // État du jeu
-  const [timeLeft, setTimeLeft] = useState(180); // 3 minutes
-  const [gameOver, setGameOver] = useState(false);
-  const [soundEnabled, setSoundEnabled] = useState(true);
-
-
-  // Gestion du Timer
-  useEffect(() => {
-    if (timeLeft > 0 && !gameOver) {
-      const timerId = setTimeout(() => setTimeLeft(timeLeft - 1), 1000);
-      return () => clearTimeout(timerId);
-    } else if (timeLeft === 0 && !gameOver) {
-      setGameOver(true);
-      if (soundEnabled) playSound('win');
-    }
-  }, [timeLeft, gameOver, soundEnabled]);
-
-  // Formatage du temps
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Simulation interaction grille
-  const handleGridClick = () => {
-    if (soundEnabled) playSound('pop');
-  };
-
-
-   // --- 4. Affichage Conditionnel ---
-
-    if (isLoading) {
-        return  <Loading/>;
-    }
+    const [soundEnabled, setSoundEnabled] = useState(true);
+    const [showLoginModal, setShowLoginModal] = useState(false);  // 🎯 Pour MatchmakingButton
     
-    if (!isAuthenticated || !gameId || !userInfo || !wsToken ) {
-        return <div className="flex h-screen w-screen items-center justify-center text-red-400 bg-gray-900">Erreur critique: Données de session manquantes.</div>;
+    const { formattedTime } = useGameTimer(game.startTimeStamp, duration);
+
+    
+
+    // 🎯 Crée la fonction playSound une seule fois
+    const playSound = useMemo(() => createPlaySound(), []);
+
+    const handleQuitButton = useCallback(() => {
+        if (!game.ws || game.ws.readyState !== WebSocket.OPEN) {
+            console.warn('WebSocket non connecté');
+            return;
+        }
+
+        // Confirmation avant abandon
+        const confirmed = window.confirm(
+            'Es-tu sûr de vouloir abandonner ? Tu perdras la partie.'
+        );
+
+        if (confirmed) {
+            game.ws.send(JSON.stringify({ type: 'abandon' }));
+        }
+    }, [game]);
+
+
+    // Récupérer la config du jeu
+    const gameConfig = getGameConfig(game.gameName!);
+
+    if (!gameConfig) {
+        navigate('/')
+        return 
     }
 
+    const GameComponent = gameConfig.component;
 
-  return (
-    <div className="min-h-screen flex flex-col relative">
-      <Navbar />
-      
-      {/* Overlay de Fin de Partie (Victoire/Défaite) */}
-      {gameOver && (
-        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-gray-800 border-2 border-brand-yellow rounded-2xl p-8 max-w-md w-full text-center shadow-2xl animate-bounce-in">
-            <h2 className="text-4xl font-black text-white mb-2">TEMPS ÉCOULÉ !</h2>
-            <p className="text-xl text-gray-300 mb-6">Quel match incroyable.</p>
-            
-            <div className="flex justify-center gap-8 mb-8">
-              <div className="text-center">
-                <p className="text-brand-pink font-bold">Toi</p>
-                <p className="text-4xl font-bold text-white">120</p>
-              </div>
-              <div className="text-center">
-                <p className="text-brand-blue font-bold">Adversaire</p>
-                <p className="text-4xl font-bold text-white">80</p>
-              </div>
-            </div>
+    
 
-            <div className="space-y-3">
-              <button 
-                onClick={() => window.location.reload()} 
-                className="w-full py-3 bg-brand-yellow text-gray-900 font-bold rounded-lg hover:bg-yellow-400 transition"
-              >
-                Revanche immédiate
-              </button>
-              <button 
-                onClick={() => navigate('/lobby')} 
-                className="w-full py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition"
-              >
-                Retour au Lobby
-              </button>
-            </div>
-          </div>
+
+    return (
+        <div className="min-h-screen flex flex-col relative">
+            <Navbar {...auth} />
+
+            {/* Overlay Countdown */}
+            {game.status === GameStatus.STARTING_COUNTDOWN && game.countdown !== null && (
+                <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center">
+                    <div className="text-9xl font-bold text-brand-yellow animate-pulse">
+                        {game.countdown}
+                    </div>
+                </div>
+            )}
+
+            {/* Overlay Game Over */}
+            {game.status === GameStatus.FINISHED && game.finishedData !== null && (
+                <GameOverlay
+                    myScore={game.me?.score ?? 0}
+                    opponentScore={game.opponent?.score ?? 0}
+                    myName={formatPlayerName(game.me?.username, 'Moi')}
+                    opponentName={formatPlayerName(game.opponent?.username, 'Adversaire')}
+                    gameName={game.gameName!}
+                    token={auth.token}
+                    finishedData={game.finishedData}
+                    myId={game.me.id}
+                    isAuthenticated={auth.isAuthenticated}
+                    setShowLoginModal={setShowLoginModal}
+                    playSound={playSound}
+                    onLobby={() => navigate('/lobby')}
+                />
+            )}
+
+            {/* Overlay Waiting */}
+            {game.status === GameStatus.WAITING_FOR_OPPONENT && (
+                <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center">
+                    <div className="flex flex-col items-center space-y-4">
+                        <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-pink border-t-transparent" />
+                        <p className="text-white text-xl">En attente de l'adversaire...</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Overlay Preparing */}
+            {game.status === GameStatus.PREPARING && (
+                <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center">
+                    <div className="flex flex-col items-center space-y-4">
+                        <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-yellow border-t-transparent" />
+                        <p className="text-white text-xl">Préparation de la partie...</p>
+                    </div>
+                </div>
+            )}
+
+            <main className="grow p-4 md:p-6 max-w-7xl mx-auto w-full">
+                {/* Header : Scores + Timer + Sound */}
+                <div className="flex justify-between items-center mb-4">
+                    <Scoreboard
+                        p1Name={formatPlayerName(game.me?.username, 'Moi')}
+                        p2Name={formatPlayerName(game.opponent?.username, 'Adversaire')}
+                        p1Score={game.me?.score ?? 0}
+                        p2Score={game.opponent?.score ?? 0}
+                        timer={formattedTime}
+                    />
+                    <button
+                        onClick={() => setSoundEnabled(!soundEnabled)}
+                        className="ml-4 p-3 bg-gray-800 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition"
+                    >
+                        {soundEnabled ? <Volume2 /> : <VolumeX />}
+                    </button>
+                </div>
+
+                {/* Zone de jeu dynamique */}
+                <div className="grow">
+                    {game.status === GameStatus.IN_PROGRESS && <GameComponent playSound={playSound} />}
+                </div>
+                {/* 🚀 Bouton retour lobby */}
+                <button
+                    onClick={handleQuitButton}
+                    className="mt-20 px-4 py-2 bg-red-600 text-gray-900 rounded-lg hover:bg-yellow-400 transition"
+                >
+                    Abandonner
+                </button>
+
+            </main>
+
+            {/* 🎯 Modal de login si nécessaire (optionnel) */}
+            {showLoginModal && (
+                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
+                    <div className="bg-gray-800 p-6 rounded-lg">
+                        <p className="text-white mb-4">Vous devez être connecté pour jouer.</p>
+                        <button
+                            onClick={() => setShowLoginModal(false)}
+                            className="px-4 py-2 bg-brand-yellow text-gray-900 rounded-lg"
+                        >
+                            Fermer
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
-      )}
+    );
+}
 
-      <main className="grow p-4 md:p-6 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Zone de Jeu */}
-        <div className="lg:col-span-2 flex flex-col" onClick={handleGridClick}>
-          <div className="flex justify-between items-center mb-4">
-            <Scoreboard 
-              p1Name="Moi (Yami)" p1Score={120}
-              p2Name="Adversaire" p2Score={80}
-              timer={formatTime(timeLeft)}
-            />
-            <button 
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="ml-4 p-3 bg-gray-800 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition"
-            >
-              {soundEnabled ? <Volume2 /> : <VolumeX />}
-            </button>
-          </div>
-          
-          <div className="grow ">
-            {/* L'endroit ou se trouve l'ecran de jeux */}
-          </div>
-        </div>
+// =============================================================================
+// MAIN COMPONENT (avec Provider)
+// =============================================================================
 
-        
+export default function GamePage() {
+    const auth = useAuth();
+    const { gameName, gameId } = useParams();
+    const navigate = useNavigate();
 
-      </main>
-    </div>
-  );
+    // Validation des paramètres
+    useEffect(() => {
+        if (!auth.isLoading && !auth.isAuthenticated) {
+            console.log('non authentifié');
+            navigate('/lobby');
+        }
+        if (gameName && !isValidGame(gameName)) {
+            console.log("le jeu n'existe pas");
+            navigate('/lobby');
+        }
+    }, [auth, gameName, navigate]);
+
+    if (auth.isLoading) {
+        return <Loading />;
+    }
+
+    if (!auth.isAuthenticated || !gameId || !gameName || !auth.userInfo) {
+        return (
+            <div className="flex h-screen items-center justify-center text-red-400 bg-gray-900">
+                Erreur: Données de session manquantes.
+            </div>
+        );
+    }
+
+    return (
+        <GameProvider
+            key={gameId}
+            gameId={gameId}
+            gameName={gameName}
+            userId={auth.userInfo.user_id}
+            username={auth.userInfo.username}
+        >
+            <GameWebSocketHandler />
+            <GamePageInner auth={auth} />
+        </GameProvider>
+    );
+}
+
+// =============================================================================
+// WEBSOCKET HANDLER (séparé pour clarté)
+// =============================================================================
+
+function GameWebSocketHandler() {
+    const game = useGame();
+    useGameWebSocket(game);
+    return null;
 }

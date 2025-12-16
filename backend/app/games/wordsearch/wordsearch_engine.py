@@ -102,6 +102,27 @@ class WordSearchEngine:
             letters.append(grid[row][col])
 
         return "".join(letters).upper()
+    
+
+
+    # =========================================================================
+    # VALIDATION ET SCORING
+    # =========================================================================
+
+    async def check_all_solutions_found(self):
+        print("appelle de check_all_solution_found dans engine")
+        """Vérifie si toutes les solutions ont été trouvées."""
+        state = await self._get_game_state()
+        solution_data = await self._get_solution_data()
+
+        total_found = len([word for sublist in state.words_found.values() for word in sublist])
+        print(f"{total_found} solution trouvée")
+        if total_found >= len(solution_data.solutions):
+
+            return await self.finalize_game(reason="completed")
+        
+        return None
+
 
     async def validate_selection(
         self,
@@ -159,10 +180,14 @@ class WordSearchEngine:
             "score_update": self.POINTS_PER_WORD,
             "new_score": new_score,
         }
+    async def finalize_game(self, abandon_player_id: str | None = None,reason = 'timeout') -> Dict[str, Any]:
 
-    async def finalize_game(self) -> Dict[str, Any]:
+        print(f"appelle de finalize game reason : {reason}")
         """
         Finalise la partie et enregistre les résultats en base.
+        
+        Args:
+            abandon_player_id: Si fourni, ce joueur a abandonné et perd automatiquement.
         """
         # 1. Récupérer l'état final
         try:
@@ -181,33 +206,42 @@ class WordSearchEngine:
         score_b = final_scores.get(player_b_id, 0)
 
         # 2. Déterminer le vainqueur
-        winner_id, loser_id = self._determine_winner(
-            player_a_id, score_a, player_b_id, score_b
-        )
-
-        # 3. Transaction DB
-        try:
-            await self._persist_results(
-                player_a_id=player_a_id,
-                player_b_id=player_b_id,
-                winner_id=winner_id,
-                loser_id=loser_id,
-                final_scores=final_scores,
-                final_state=final_state,
+        if abandon_player_id:
+            # 🎯 CAS ABANDON: Le joueur qui abandonne perd
+            loser_id = abandon_player_id
+            winner_id = player_b_id if abandon_player_id == player_a_id else player_a_id
+        else:
+            # Cas normal: déterminer par les scores
+            winner_id, loser_id = self._determine_winner(
+                player_a_id, score_a, player_b_id, score_b
             )
-        except Exception as e:
-            await self._db_session.rollback()
-            return {"status": "error", "detail": f"Échec DB: {e}"}
+
+        # # 3. Transaction DB
+        # try:
+        #     await self._persist_results(
+        #         player_a_id=player_a_id,
+        #         player_b_id=player_b_id,
+        #         winner_id=winner_id,
+        #         loser_id=loser_id,
+        #         final_scores=final_scores,
+        #         final_state=final_state,
+        #     )
+        # except Exception as e:
+        #     await self._db_session.rollback()
+        #     return {"status": "error", "detail": f"Échec DB: {e}"}
 
         # 4. Nettoyage Redis
         await self._redis.delete(f"{GAME_STATE_KEY_PREFIX}{self._game_id}")
 
         return {
             "status": GameStatus.GAME_FINISHED,
-            "winner": winner_id,
+            "winner_id": winner_id,
+            "loser_id": loser_id,
             "scores": {player_a_id: score_a, player_b_id: score_b},
+            "reason": reason,
         }
 
+    
     @staticmethod
     def _determine_winner(
         player_a_id: str,
@@ -265,3 +299,51 @@ class WordSearchEngine:
             # Match nul: seuls les points sont ajoutés
 
         await self._db_session.commit()
+
+
+       
+
+
+
+
+
+"""
+
+```
+
+## Résumé du système de points
+
+| Direction | Symbole | Points | Difficulté |
+|-----------|---------|--------|------------|
+| Horizontal droite | → | 5 | Facile |
+| Horizontal gauche | ← | 8 | Moyen |
+| Vertical bas | ↓ | 10 | Moyen+ |
+| Vertical haut | ↑ | 12 | Difficile |
+| Diagonal bas-droite | ↘ | 15 | Difficile |
+| Diagonal bas-gauche | ↙ | 18 | Très difficile |
+| Diagonal haut-droite | ↗ | 18 | Très difficile |
+| Diagonal haut-gauche | ↖ | 20 | Expert |
+
+## Bonus de longueur
+
+| Longueur | Bonus |
+|----------|-------|
+| ≤ 5 lettres | 0 |
+| 6 lettres | +2 |
+| 7 lettres | +4 |
+| 8 lettres | +6 |
+| etc. | +2 par lettre |
+
+## Exemple de calcul
+```
+Mot: "PYTHON" (6 lettres)
+Direction: Diagonal haut-gauche (↖)
+
+Base points: 20
+Length bonus: (6 - 5) × 2 = 2
+Total: 22 points
+
+
+
+
+"""

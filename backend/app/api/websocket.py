@@ -24,7 +24,7 @@ ACTIVE_GAMES: dict[str, GameRoom] = {}
 
 # --- Constantes pour le Token Éphémère ---
 WS_TOKEN_PREFIX = "ws_auth:"
-WS_TOKEN_EXPIRE_SECONDS = 300  # 5 minutes
+WS_TOKEN_EXPIRE_SECONDS = 600 # 5 minutes
 
 
 class WsTokenResponse(SQLModel):
@@ -239,36 +239,44 @@ async def websocket_endpoint(
     # 4. Gestion de la salle de jeu (avec accès Redis)
     room = get_or_create_room(game_id,session, redis_conn)
 
-    # Refuser si la salle est pleine et que le joueur n'y est pas déjà
-    if room.is_full() and player_id not in room.player_ids:
-        await websocket.close(
-            code=status.WS_1008_POLICY_VIOLATION,
-            reason="Room is full",
-        )
-        return
+    # # 🎯 4. PROTECTION: Si le joueur est déjà connecté avec un autre socket, refuser
+    # existing_socket = room.get_player_socket(player_id)
+    # if existing_socket is not None:
+    #     print(f"⚠️ [{game_id}] {user.username} déjà connecté, refus de la nouvelle connexion")
+    #     await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Already connected")
+    #     return
 
-    # 5. Acceptation et enregistrement
+    # 6. Vérifier si c'est une reconnexion AVANT d'ajouter le joueur
+    is_reconnection = room.is_reconnection(player_id)
+
+    # 7. Accepter la connexion WebSocket
     await websocket.accept()
 
-    if not room.add_player(player_id, websocket,user.username):
-        # Le joueur était peut-être déjà connecté, on met à jour son socket
-        room.remove_player(player_id)
-        room.add_player(player_id, websocket,user.username)
+    # 8. Ajouter/mettre à jour le joueur
+    if not room.add_player(player_id, websocket, user.username):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Room full")
+        return
 
-    # 6. 🎯 NOUVEAU: Envoyer l'état du jeu au joueur dès la connexion
-    await send_game_state_to_player(room, player_id, redis_conn, game_id)
-
-    print(f"✅ [{game_id}] Joueur {player_id} connecté ({room.player_count}/2)")
-
-
-    # await room.handle_game_start()
+    # # 9. 🎯 Déclencher le bon flow selon le type de connexion
+    if is_reconnection:
+        print(f"🔄 [{game_id}] Reconnexion de {user.username}")
+        await room.on_player_reconnected(player_id)
+    else:
+        print(f"✅ [{game_id}] {user.username} connecté ({room.player_count}/2)")
+        await room.on_player_connected(player_id)
 
     
 
     # 7. Boucle de réception des messages
     try:
         while True:
+
+            
+            
             data = await websocket.receive_json()
+            
+            
+            
             await handle_player_message(room, player_id, data)
 
     except WebSocketDisconnect:
@@ -289,58 +297,87 @@ async def handle_player_message(
     """Traite un message reçu d'un joueur."""
     message_type = data.get("type")
 
-    # # Permettre certains messages même si le jeu n'est pas en cours
-    # allowed_before_start = ["player_ready", "selection_update"]
     
-    # if room.state != GameStatus.GAME_IN_PROGRESS and message_type not in allowed_before_start:
-    #     await room.send_to_player(player_id, {
-    #         "type": "error",
-    #         "message": "La partie n'est pas en cours.",
-    #     })
-    #     return
+    match message_type:
+        case 'abandon' :
 
-    # Gérer les différents types de messages
-    if message_type == "selection_update":
-        # Transmettre la sélection à l'adversaire (aperçu en temps réel)
-        opponent_id = room.get_opponent_id(player_id)
-        if opponent_id:
-            await room.send_to_player(opponent_id, {
-                **data,
-                "from": room.get_username(player_id),
-            })
+            print('abandon reçu ')
+
+            result = await room._controller.handle_abandon(player_id)
+
+            print(f"obtention du resultat de l'abandon {result}")
     
-    elif message_type == "submit_selection":
-        solution = data.get("solution")
-        result  = await room._controller.process_player_action(player_id,solution)
+            if result.get("status") == GameStatus.GAME_FINISHED:
+                print("fin de la game")
+                await room._end_game({
+                    **result,
+                    "abandon_player_id": player_id,
+                    "abandon_username": room.get_username(player_id),
+                })
+
+            pass
+
+        case 'player_ready':
+            await room.on_player_ready(player_id)
 
 
-        if result.get("success"):
-            # Récupérer l'état mis à jour pour calculer les mots restants
-
-            await room.broadcast({
-                "type":GameMessages.WORD_FOUND_SUCCESS,
-                **result,
-                "found_by":room.get_username(player_id)
-            })
+        # Gérer les différents types de messages
+        case  "selection_update":
+            # Transmettre la sélection à l'adversaire (aperçu en temps réel)
+            opponent_id = room.get_opponent_id(player_id)
+            if opponent_id:
+                await room.send_to_player(opponent_id, {
+                    **data,
+                    "from": room.get_username(player_id),
+                })
         
-        else:
-            await room.send_to_player(player_id,{**result,"from":room.get_username(player_id)})
-        
-        pass
+        case  "submit_selection":
+            solution = data.get("solution")
+            result  = await room._controller.process_player_action(player_id,solution)
 
-    else:
-        # Transmettre les autres messages à l'adversaire
-        opponent_id = room.get_opponent_id(player_id)
-        if opponent_id:
-            await room.send_to_player(opponent_id, {
-                **data,
-                "from": room.get_username(player_id),
-            })
+
+            if result.get("success"):
+                # Récupérer l'état mis à jour pour calculer les mots restants
+
+                await room.broadcast({
+                    "type":GameMessages.WORD_FOUND_SUCCESS,
+                    **result,
+                    "found_by":room.get_username(player_id)
+                })
+
+                await room.broadcast({
+                    "type":GameMessages.SCORE_UPDATE,
+                    "player_id":player_id,
+                    "new_score":result["new_score"]
+                })
+
+                result =  await room._controller.check_game_completed()
+
+                print(f"resultat recupéré dans le websocket : {result}")
+
+                if(result) :
+                    await room._end_game(result)
+            
+            else:
+                await room.send_to_player(player_id,{**result,"from":room.get_username(player_id)})
+            
+            pass
+
+        case _:
+            # Transmettre les autres messages à l'adversaire
+            opponent_id = room.get_opponent_id(player_id)
+            if opponent_id:
+                await room.send_to_player(opponent_id, {
+                    **data,
+                    "from": room.get_username(player_id),
+                })
 
 
 async def handle_player_disconnect(room: GameRoom, player_id: str, game_id: str) -> None:
     """Gère la déconnexion d'un joueur."""
     room.remove_player(player_id)
+
+    print(f"player {player_id} removed from the room ")
 
     # Notifier l'adversaire
     opponent_id = room.get_opponent_id(player_id)
@@ -350,43 +387,11 @@ async def handle_player_disconnect(room: GameRoom, player_id: str, game_id: str)
             "message": "Votre adversaire s'est déconnecté.",
         })
 
-    # Si la partie était en cours, la terminer
-    if room.state == GameStatus.GAME_IN_PROGRESS and opponent_id:
-        await room.end_game(winner_id=opponent_id, reason="opponent_disconnected")
+    # # Si la partie était en cours, la terminer
+    # if room.state == GameStatus.GAME_IN_PROGRESS and opponent_id:
+    #     await room.end_game(winner_id=opponent_id, reason="opponent_disconnected")
 
     cleanup_room_if_empty(game_id)
 
 
 
-
-
-"""
-
-## Résumé des changements
-
-| Problème | Solution |
-|----------|----------|
-| `uuid1()` pas converti en str | `str(uuid4())` (uuid4 plus sécurisé) |
-| Token WS jamais validé | Fonction `validate_ws_token()` |
-| `return {...}` dans WS | `await websocket.close()` |
-| `handle_game_start(room)` | `room.handle_game_start()` |
-| `room.players[id] = ws` | `room.add_player(id, ws)` |
-| `.value` manquant | Ajouté sur tous les enums dans JSON |
-| `import *` | Import explicite |
-| Pas de cleanup | `cleanup_room_if_empty()` |
-| `playerId` | Renommé `player_id` (snake_case) |
-| Pas de validation joueur/partie | Vérification `player_id in (p1, p2)` |
-| Token réutilisable | Supprimé après usage (one-time) |
-
-## Flow complet
-```
-1. Client POST /ws-auth avec JWT → reçoit ws_token
-2. Client connecte ws://...?token=<ws_token>
-3. Serveur valide token via Redis, supprime le token
-4. Serveur vérifie que le joueur fait partie de la game
-5. Joueur rejoint la room
-6. Quand 2 joueurs → countdown → game start
-7. Messages relayés entre joueurs
-8. Déconnexion → notification adversaire → cleanup
-
-"""

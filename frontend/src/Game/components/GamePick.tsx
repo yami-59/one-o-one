@@ -1,19 +1,10 @@
 import React from 'react'
 import { Clock } from 'lucide-react';
+import type { GameConfig } from '../types/GameInterface';
 
 
-export interface GameMode {
-    id: string;
-    alias:string
-    name: string;
-    description: string;
-    duration: string;
-    difficulty: 'easy' | 'medium' | 'hard';
-    playersOnline: number;
-    icon: React.ReactNode;
-}
 
-const getDifficultyColor = (difficulty: GameMode['difficulty']) => {
+const getDifficultyColor = (difficulty: GameConfig['difficulty']) => {
     switch (difficulty) {
         case 'easy':
             return 'text-green-400 bg-green-400/10';
@@ -25,8 +16,8 @@ const getDifficultyColor = (difficulty: GameMode['difficulty']) => {
 };
 
 const GamePick = ({setSelectedGame,isSelected,...game} :
-     GameMode & {
-        setSelectedGame:React.Dispatch<React.SetStateAction<GameMode>>;
+     GameConfig & {
+        setSelectedGame:React.Dispatch<React.SetStateAction<GameConfig>>;
         isSelected:boolean;
     }) => {
 
@@ -67,7 +58,7 @@ const GamePick = ({setSelectedGame,isSelected,...game} :
                     isSelected ? 'text-brand-pink' : 'text-white group-hover:text-brand-pink'
                 }`}
             >
-                {game.alias}
+                {game.displayName}
             </h4>
 
             {/* Description */}
@@ -77,11 +68,11 @@ const GamePick = ({setSelectedGame,isSelected,...game} :
             <div className="flex justify-between items-center text-xs text-gray-500">
                 <span className="flex items-center gap-1">
                     <Clock size={12} />
-                    {game.duration}
+                    {game.durationString}
                 </span>
                 <span className="flex items-center gap-1">
                     <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                    {game.playersOnline} en ligne
+                    {/* {game.playersOnline} en ligne */}
                 </span>
             </div>
         </div>

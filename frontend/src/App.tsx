@@ -2,9 +2,8 @@
 
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 // import Exemple from './pages/exemple.tsx';
-import GameRoomWordSearch from './pages/GameRoomWordSearch.tsx';
+import GamePage from './pages/GamePage.tsx';
 import AdminPage from './pages/AdminPage'; 
-import GamePage from './pages/GamePage';
 import LobbyPage from './pages/LobbyPage';
 function App() {
     return (
@@ -25,7 +24,7 @@ function App() {
                 {/*La route racine "/" est définie pour afficher HomePage */}
                 {/* <Route path="/" element={<Exemple />} /> */}
                 {/* La route est définie avec un paramètre dynamique nommé ':gameId' */}
-                <Route path="/game/:gameName/:gameId/:wsToken" element={<GameRoomWordSearch />} />
+                <Route path="/game/:gameName/:gameId" element={<GamePage />} />
             </Routes>
         </BrowserRouter>
     );
