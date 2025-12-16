@@ -90,7 +90,6 @@ export const construct_word = ({ grid, indexes }: WordConstructProps): string | 
         word += grid[r][c];
     }
 
-    console.log(`6. Mot Reconstruit Final: ${word}`);
     // console.log('--- FIN RECONSTRUCTION DU MOT ---');
 
     return word;

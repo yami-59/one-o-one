@@ -81,7 +81,7 @@ class WordSearchController:
     async def _schedule_timeout(self):
         try:
             await asyncio.sleep(self.GAME_DURATION_SECONDS)
-            result = await self._engine.finalize_game("timeout")
+            result = await self._engine.finalize_game()
             return result 
         except asyncio.CancelledError:
             pass
@@ -98,4 +98,12 @@ class WordSearchController:
     
     async def check_game_completed(self):
 
-        await self._engine.check_all_solutions_found()
+        print("Appelle de check_game_completed dans le controller")
+
+        return await self._engine.check_all_solutions_found()
+    
+    async def handle_abandon(self, player_id: str) -> Dict[str, Any]:
+        """Gère l'abandon d'un joueur."""
+
+        print("appelle de handle abandon dans controller")
+        return await self._engine.finalize_game(abandon_player_id=player_id,reason='abandon')

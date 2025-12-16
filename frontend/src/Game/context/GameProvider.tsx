@@ -1,9 +1,9 @@
 
 
-import {  useState, useCallback, type ReactNode } from 'react';
+import {  useState, useCallback, type ReactNode,useEffect } from 'react';
 import { type GameStatusType,GameStatus } from '../../shared/GameMessages';
 import { type GameContextValue ,type Player,GameContext} from './GameContext';
-
+import { type GameFinishedMessage } from '../types/GameInterface';
 // =============================================================================
 // PROVIDER
 // =============================================================================
@@ -27,6 +27,7 @@ export default function GameProvider({ children, gameId, gameName, userId, usern
     const [me, setMe] = useState<Player>({ id: userId, username, score: 0 });
     const [opponent, setOpponent] = useState<Player | null>(null);
     const [gameData, setGameData] = useState<unknown>(null);
+    const [finishedData,setGameFinishedData] = useState<GameFinishedMessage|null>(null)
     // Actions
     const updateScore = useCallback((playerId: string, score: number) => {
         if (playerId === userId) {
@@ -59,6 +60,7 @@ export default function GameProvider({ children, gameId, gameName, userId, usern
         opponent,
         ws,
         gameData,
+        finishedData,
         
         // Actions (écriture)
         sendMessage,
@@ -73,7 +75,13 @@ export default function GameProvider({ children, gameId, gameName, userId, usern
         setMe,
         setOpponent,
         setGameData,
+        setGameFinishedData,
     };
+
+    // 🎯 DEBUG
+    useEffect(() => {
+        console.log(`🌐 [GameProvider] ws state changé:`, ws ? `readyState=${ws.readyState}` : 'null');
+    }, [ws]);
 
     return (
         <GameContext.Provider value={value}>

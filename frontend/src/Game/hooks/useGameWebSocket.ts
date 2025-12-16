@@ -6,8 +6,9 @@ import { GameStatus } from '../../shared/GameMessages';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const WS_URL = import.meta.env.VITE_WS_BASE_URL;
-// 🎯 Intervalle de ping (30 secondes)
-const PING_INTERVAL_MS = 30000;
+
+
+
 type GameData = {
   realtime_score: Record<string, number>;
   // ... autres champs
@@ -23,6 +24,8 @@ function getPlayerScore(gameData: GameData, playerId: string ): number {
 
 
 
+// Ajouter au début du fichier
+let globalWsInstance = 0;
 
 
 
@@ -30,32 +33,11 @@ export function useGameWebSocket(game: GameContextValue) {
     const wsRef = useRef<WebSocket | null>(null);
     const isConnecting = useRef(false);
     const isConnected = useRef(false);
-    const isMounted = useRef(false);  // 🎯 Track si vraiment monté
-    const pingIntervalRef = useRef<NodeJS | null>(null);  // 🎯 Référence pour le ping
 
-    // 🎯 Fonction pour démarrer le heartbeat
-    const startHeartbeat = useCallback((ws: WebSocket) => {
-        // Arrêter l'ancien intervalle si existant
-        if (pingIntervalRef.current) {
-            clearInterval(pingIntervalRef.current);
-        }
+    const instanceId = useRef(++globalWsInstance);
 
-        pingIntervalRef.current = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: 'ping' }));
-                console.log('💓 Ping envoyé');
-            }
-        }, PING_INTERVAL_MS);
-    }, []);
-
-    // 🎯 Fonction pour arrêter le heartbeat
-    const stopHeartbeat = useCallback(() => {
-        if (pingIntervalRef.current) {
-            clearInterval(pingIntervalRef.current);
-            pingIntervalRef.current = null;
-        }
-    }, []);
-
+    // Log l'instance pour debug
+    console.log(`🔷 [Instance ${instanceId.current}] Hook créé pour ${game.me.id}`);
 
 
 
@@ -89,27 +71,7 @@ export function useGameWebSocket(game: GameContextValue) {
     }, []);
 
     const connect = useCallback(async () => {
-        // 🎯 Protection renforcée
-        if (!isMounted.current) {
-            console.log('⚠️ Composant non monté, connexion annulée');
-            return;
-        }
-        if (isConnecting.current) {
-            console.log('⚠️ Connexion déjà en cours');
-            return;
-        }
-        if (isConnected.current) {
-            console.log('⚠️ Déjà connecté');
-            return;
-        }
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-            console.log('⚠️ WebSocket déjà ouvert');
-            return;
-        }
-        if (wsRef.current?.readyState === WebSocket.CONNECTING) {
-            console.log('⚠️ WebSocket en cours de connexion');
-            return;
-        }
+       
 
         const { gameId, gameName } = gameRef.current;
         if (!gameId || !gameName) {
@@ -122,12 +84,7 @@ export function useGameWebSocket(game: GameContextValue) {
 
         const wsToken = await fetchWsToken();
         
-        // 🎯 Vérifier encore si monté après l'await
-        if (!isMounted.current) {
-            console.log('⚠️ Composant démonté pendant fetchWsToken');
-            isConnecting.current = false;
-            return;
-        }
+        
 
         if (!wsToken) {
             console.error('❌ Pas de ws_token');
@@ -140,33 +97,25 @@ export function useGameWebSocket(game: GameContextValue) {
         const ws = new WebSocket(wsUrl);
 
         ws.onopen = () => {
-            if (!isMounted.current) {
-                ws.close(1000, 'Component unmounted');
-                return;
-            }
-            console.log('✅ WebSocket connecté');
+           
             isConnecting.current = false;
             isConnected.current = true;
             wsRef.current = ws;
+
+            // 🎯 DEBUG: Vérifier que setWs est appelé
             gameRef.current.setWs(ws);
-            // 🎯 Démarrer le heartbeat
-            startHeartbeat(ws);
 
             console.log(`✅ WebSocket connecté pour ${gameRef.current.me?.username} (${gameRef.current.me?.id})`);
         };
 
         ws.onclose = (event) => {
+            console.log(`🔌 [Instance ${instanceId.current}] WebSocket fermé pour ${gameRef.current.me.id}: code=${event.code}`);
             console.log(`🔌 WebSocket fermé: code=${event.code}, reason=${event.reason}, wasClean=${event.wasClean}`);
             isConnected.current = false;
             isConnecting.current = false;
             wsRef.current = null;
             
-            if (isMounted.current) {
-                gameRef.current.setWs(null);
-            }
-
-            // 🎯 Arrêter le heartbeat
-            stopHeartbeat();
+            
 
             // 🎯 NE PAS reconnecter automatiquement
             // Les codes 1006 (erreur handshake) et 1008 (policy) ne doivent pas retry
@@ -175,13 +124,10 @@ export function useGameWebSocket(game: GameContextValue) {
         ws.onerror = (error) => {
             console.error('❌ WebSocket erreur:', error);
             isConnecting.current = false;
-            if (isMounted.current) {
-                gameRef.current.setStatus(GameStatus.ERROR);
-            }
+          
         };
 
         ws.onmessage = (event: MessageEvent) => {
-            if (!isMounted.current) return;
             
             try {
                 const data = JSON.parse(event.data);
@@ -189,10 +135,7 @@ export function useGameWebSocket(game: GameContextValue) {
 
                 switch (data.type) {
 
-                    // 🎯 Répondre au pong du serveur (optionnel, pour debug)
-                    case 'pong':
-                        console.log('💓 Pong reçu');
-                        break;
+             
 
                     case 'reconnected':
                         console.log('🔄 Reconnexion...');
@@ -251,7 +194,9 @@ export function useGameWebSocket(game: GameContextValue) {
 
                     case 'game_finished':
                         console.log(data)
+                        g.setGameFinishedData(data)
                         g.setGameOver();
+                        
                         break;
 
                     default:
@@ -263,18 +208,18 @@ export function useGameWebSocket(game: GameContextValue) {
         };
 
         wsRef.current = ws;
-    }, [fetchWsToken,startHeartbeat,stopHeartbeat]);
+    }, [fetchWsToken]);
 
     useEffect(() => {
         console.log('🟢 useEffect: montage');
-        isMounted.current = true;
         
+        const instanceCopy = instanceId.current
         
         connect();
 
         return () => {
+            console.log(`🔴 [Instance ${instanceCopy}] Cleanup pour ${gameRef.current.me.id}`);
             console.log('🔴 useEffect: démontage');
-            isMounted.current = false;
             isConnected.current = false;
             isConnecting.current = false;
             if (wsRef.current) {

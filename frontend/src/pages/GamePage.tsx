@@ -1,7 +1,7 @@
 // /frontend/src/pages/GamePage.tsx
 
 import { Volume2, VolumeX } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect,useCallback,useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Scoreboard from '../components/Scoreboard';
@@ -15,6 +15,9 @@ import { getGameConfig, isValidGame } from '../Game/registry/gameRegistry';
 import { useGameWebSocket } from '../Game/hooks/useGameWebSocket';
 import { type GameBaseData } from '../Game/types/GameInterface';
 import { useGameTimer } from '../Game/hooks/useGameTimer';
+import { createPlaySound } from '../Game/types/GameInterface';
+
+
 
 // Helper pour formater le nom
 const formatPlayerName = (username: string | undefined, fallback: string): string => {
@@ -36,18 +39,40 @@ function GamePageInner({ auth }: { auth: AuthContextValue }) {
     
     const { formattedTime } = useGameTimer(game.startTimeStamp, duration);
 
+    
+
+    // 🎯 Crée la fonction playSound une seule fois
+    const playSound = useMemo(() => createPlaySound(), []);
+
+    const handleQuitButton = useCallback(() => {
+        if (!game.ws || game.ws.readyState !== WebSocket.OPEN) {
+            console.warn('WebSocket non connecté');
+            return;
+        }
+
+        // Confirmation avant abandon
+        const confirmed = window.confirm(
+            'Es-tu sûr de vouloir abandonner ? Tu perdras la partie.'
+        );
+
+        if (confirmed) {
+            game.ws.send(JSON.stringify({ type: 'abandon' }));
+        }
+    }, [game]);
+
+
     // Récupérer la config du jeu
     const gameConfig = getGameConfig(game.gameName!);
 
     if (!gameConfig) {
-        return (
-            <div className="flex h-screen items-center justify-center text-red-400">
-                Jeu inconnu: {game.gameName}
-            </div>
-        );
+        navigate('/')
+        return 
     }
 
     const GameComponent = gameConfig.component;
+
+    
+
 
     return (
         <div className="min-h-screen flex flex-col relative">
@@ -63,7 +88,7 @@ function GamePageInner({ auth }: { auth: AuthContextValue }) {
             )}
 
             {/* Overlay Game Over */}
-            {game.status === GameStatus.FINISHED && (
+            {game.status === GameStatus.FINISHED && game.finishedData !== null && (
                 <GameOverlay
                     myScore={game.me?.score ?? 0}
                     opponentScore={game.opponent?.score ?? 0}
@@ -71,8 +96,11 @@ function GamePageInner({ auth }: { auth: AuthContextValue }) {
                     opponentName={formatPlayerName(game.opponent?.username, 'Adversaire')}
                     gameName={game.gameName!}
                     token={auth.token}
+                    finishedData={game.finishedData}
+                    myId={game.me.id}
                     isAuthenticated={auth.isAuthenticated}
                     setShowLoginModal={setShowLoginModal}
+                    playSound={playSound}
                     onLobby={() => navigate('/lobby')}
                 />
             )}
@@ -117,14 +145,14 @@ function GamePageInner({ auth }: { auth: AuthContextValue }) {
 
                 {/* Zone de jeu dynamique */}
                 <div className="grow">
-                    {game.status === GameStatus.IN_PROGRESS && <GameComponent />}
+                    {game.status === GameStatus.IN_PROGRESS && <GameComponent playSound={playSound} />}
                 </div>
                 {/* 🚀 Bouton retour lobby */}
                 <button
-                    onClick={() => navigate('/lobby')}
-                    className="mt-20 px-4 py-2 bg-brand-yellow text-gray-900 rounded-lg hover:bg-yellow-400 transition"
+                    onClick={handleQuitButton}
+                    className="mt-20 px-4 py-2 bg-red-600 text-gray-900 rounded-lg hover:bg-yellow-400 transition"
                 >
-                    Retour au lobby
+                    Abandonner
                 </button>
 
             </main>

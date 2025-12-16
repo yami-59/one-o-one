@@ -1,8 +1,10 @@
 // /frontend/src/game/components/GameOverlay.tsx
 
-import { Trophy, Home, Crown, Frown, Handshake } from 'lucide-react';
-import MatchmakingButton from '../../components/MatchmakingButton';
-
+import { Trophy, Home, Crown, Frown, Handshake,Flag } from 'lucide-react';
+import {MatchMakingOverlay} from '../../components/MatchmakingButton';
+import { type GameFinishedMessage } from '../types/GameInterface';
+import type { SoundType } from '../types/GameInterface';
+import { useEffect } from 'react';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -16,20 +18,44 @@ interface GameOverlayProps {
     token: string | null;
     isAuthenticated: boolean;
     setShowLoginModal: React.Dispatch<React.SetStateAction<boolean>>;
+    finishedData:GameFinishedMessage;
+    myId:string;
+    playSound:((type: SoundType) => void) 
     onLobby: () => void;
 }
 
-type GameResult = 'win' | 'lose' | 'draw';
+type GameResult = 'win' | 'lose' | 'draw' | 'abandon';
 
 // =============================================================================
 // HELPERS
 // =============================================================================
 
-const getResult = (myScore: number, opponentScore: number): GameResult => {
-    if (myScore > opponentScore) return 'win';
-    if (myScore < opponentScore) return 'lose';
-    return 'draw';
+
+const determineGameResult = (
+    finishedData: GameFinishedMessage,
+    myPlayerId: string,
+): GameResult => {
+    const { reason, winner_id, abandon_player_id } = finishedData;
+
+    // Cas égalité
+    if (!winner_id) {
+        return 'draw';
+    }
+
+    // Cas abandon
+    if (reason === 'abandon') {
+        // Si c'est moi qui ai abandonné → lose
+        // Si c'est l'adversaire → abandon (victoire par abandon)
+        if (abandon_player_id === myPlayerId) {
+            return 'lose';
+        }
+        return 'abandon';
+    }
+
+    return winner_id === myPlayerId ? 'win' : 'lose';
 };
+
+
 
 const resultConfig: Record<GameResult, {
     title: string;
@@ -59,6 +85,13 @@ const resultConfig: Record<GameResult, {
         borderColor: 'border-brand-blue',
         titleColor: 'text-brand-blue',
     },
+   abandon: {
+        title: 'VICTOIRE PAR ABANDON',
+        subtitle: 'Ton adversaire a quitté la partie.',
+        icon: <Flag className="text-orange-400" size={48} />,
+        borderColor: 'border-orange-500',
+        titleColor: 'text-orange-400',
+    },
 };
 
 // =============================================================================
@@ -74,10 +107,23 @@ export default function GameOverlay({
     token,
     isAuthenticated,
     setShowLoginModal,
+    finishedData,
+    playSound,
+    myId,
     onLobby,
 }: GameOverlayProps) {
-    const result = getResult(myScore, opponentScore);
+    
+    const result = determineGameResult(finishedData, myId);
     const config = resultConfig[result];
+
+
+    useEffect(() =>{
+
+        console.log(result)
+
+        if(result === 'win' || result === 'abandon') playSound('win')
+    
+    },[playSound,result])
 
     return (
         <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
@@ -136,17 +182,17 @@ export default function GameOverlay({
                 {/* Boutons */}
                 <div className="flex flex-col items-center gap-3">
                     {/* 🎯 MatchmakingButton pour rejouer */}
-                    <MatchmakingButton
-                        title="Partie Suivante"
+                    <MatchMakingOverlay
+
                         token={token}
-                        game_name={gameName}
+                        gameName={gameName}
                         isAuthenticated={isAuthenticated}
-                        setShowLoginModal={setShowLoginModal}
+                        onAuthRequired={() => setShowLoginModal(true)}
                     />
 
                     <button
                         onClick={onLobby}
-                        className="w-1/2 py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-2"
+                        className="w-full py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-2"
                     >
                         <Home size={20} />
                         Retour au Lobby

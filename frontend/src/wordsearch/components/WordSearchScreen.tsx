@@ -1,14 +1,23 @@
 // /frontend/src/wordsearch/components/WordSearchScreen.tsx
 
-import { useMemo } from 'react';
+import { useMemo , useEffect} from 'react';
 import { useGame } from '../../Game/context/GameContext';
 import { useCanvasDrawing } from '../hooks/canvas';
 import GameGrid from './GameGrid';
 import SidePanel from './SidePanel';
 import type { WordSolution, WordSearchData } from '../types';
+import type { GameComponentProps } from '../../Game/types/GameInterface';
 
-export function WordSearchScreen() {
+export function WordSearchScreen({ playSound } : GameComponentProps) {
     const game = useGame();
+
+
+    // 🎯 DEBUG: Log quand game.ws change
+    useEffect(() => {
+        console.log(`🔄 [WordSearchScreen] game.ws changé:`, 
+            game.ws ? `readyState=${game.ws.readyState}` : 'null'
+        );
+    }, [game.ws]);
     
     // Cast des données spécifiques au jeu
     const data = game.gameData as WordSearchData | null;
@@ -27,11 +36,12 @@ export function WordSearchScreen() {
 
     // Hook de dessin Canvas
     const canvasProps = useCanvasDrawing(
+        playSound,
         game.setGameData,
         data?.grid_data ?? [],
         solutionsFound,
         game.ws,
-        game.me?.id ?? ''
+        game.me?.id ?? '',
     );
 
     // Liste des mots trouvés

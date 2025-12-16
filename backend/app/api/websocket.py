@@ -257,7 +257,7 @@ async def websocket_endpoint(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Room full")
         return
 
-    # 9. 🎯 Déclencher le bon flow selon le type de connexion
+    # # 9. 🎯 Déclencher le bon flow selon le type de connexion
     if is_reconnection:
         print(f"🔄 [{game_id}] Reconnexion de {user.username}")
         await room.on_player_reconnected(player_id)
@@ -265,17 +265,18 @@ async def websocket_endpoint(
         print(f"✅ [{game_id}] {user.username} connecté ({room.player_count}/2)")
         await room.on_player_connected(player_id)
 
-
     
 
     # 7. Boucle de réception des messages
     try:
         while True:
+
+            
+            
             data = await websocket.receive_json()
-
-            # 🎯 Log TOUS les messages reçus avec l'identité du joueur
-            print(f"📩 [{game_id}] Reçu de {user.username}: {data.get('type')}")
-
+            
+            
+            
             await handle_player_message(room, player_id, data)
 
     except WebSocketDisconnect:
@@ -298,10 +299,23 @@ async def handle_player_message(
 
     
     match message_type:
+        case 'abandon' :
 
-        case 'ping':
-            await room.send_to_player(player_id, {"type": "pong"})
-            return
+            print('abandon reçu ')
+
+            result = await room._controller.handle_abandon(player_id)
+
+            print(f"obtention du resultat de l'abandon {result}")
+    
+            if result.get("status") == GameStatus.GAME_FINISHED:
+                print("fin de la game")
+                await room._end_game({
+                    **result,
+                    "abandon_player_id": player_id,
+                    "abandon_username": room.get_username(player_id),
+                })
+
+            pass
 
         case 'player_ready':
             await room.on_player_ready(player_id)
@@ -339,9 +353,10 @@ async def handle_player_message(
 
                 result =  await room._controller.check_game_completed()
 
-                if(result) : await room._end_game(result)
+                print(f"resultat recupéré dans le websocket : {result}")
 
-                
+                if(result) :
+                    await room._end_game(result)
             
             else:
                 await room.send_to_player(player_id,{**result,"from":room.get_username(player_id)})
@@ -380,35 +395,3 @@ async def handle_player_disconnect(room: GameRoom, player_id: str, game_id: str)
 
 
 
-
-
-"""
-
-## Résumé des changements
-
-| Problème | Solution |
-|----------|----------|
-| `uuid1()` pas converti en str | `str(uuid4())` (uuid4 plus sécurisé) |
-| Token WS jamais validé | Fonction `validate_ws_token()` |
-| `return {...}` dans WS | `await websocket.close()` |
-| `handle_game_start(room)` | `room.handle_game_start()` |
-| `room.players[id] = ws` | `room.add_player(id, ws)` |
-| `.value` manquant | Ajouté sur tous les enums dans JSON |
-| `import *` | Import explicite |
-| Pas de cleanup | `cleanup_room_if_empty()` |
-| `playerId` | Renommé `player_id` (snake_case) |
-| Pas de validation joueur/partie | Vérification `player_id in (p1, p2)` |
-| Token réutilisable | Supprimé après usage (one-time) |
-
-## Flow complet
-```
-1. Client POST /ws-auth avec JWT → reçoit ws_token
-2. Client connecte ws://...?token=<ws_token>
-3. Serveur valide token via Redis, supprime le token
-4. Serveur vérifie que le joueur fait partie de la game
-5. Joueur rejoint la room
-6. Quand 2 joueurs → countdown → game start
-7. Messages relayés entre joueurs
-8. Déconnexion → notification adversaire → cleanup
-
-"""

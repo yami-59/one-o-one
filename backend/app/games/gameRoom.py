@@ -353,11 +353,15 @@ class GameRoom:
 
         print(f"🚀 [{self._game_id}] Partie démarrée!")
 
-        # Lancer le timeout en arrière-plan
-        self._timeout_task = self._controller.start_game()
 
+
+        # 🎯 CORRECTION: Lancer le timeout en arrière-plan avec asyncio.create_task
+        self._timeout_task = asyncio.create_task(self._handle_timeout())
+
+    async def _handle_timeout(self) -> None:
+        """Gère le timeout de fin de partie en arrière-plan."""
         try:
-            result = await self._timeout_task
+            result = await self._controller.start_game()
             if result:
                 print(f"⏱️ [{self._game_id}] Timeout result: {result}")
                 await self._end_game(result)
@@ -365,8 +369,6 @@ class GameRoom:
             print(f"⏹️ [{self._game_id}] Timeout annulé")
         except Exception as e:
             print(f"❌ [{self._game_id}] Erreur timeout: {e}")
-
-    
     
     # =========================================================================
     # GAME END
@@ -379,29 +381,32 @@ class GameRoom:
 
         self._state = GameStatus.GAME_FINISHED
 
-        # 🎯 Annuler le timeout si encore actif
         if self._timeout_task and not self._timeout_task.done():
             self._timeout_task.cancel()
 
-        # 🎯 Correction: utiliser winner_id au lieu de winner
         winner_id = result.get('winner_id')
+        loser_id = result.get('loser_id')
         scores = result.get('scores', {})
         reason = result.get('reason', 'unknown')
+        
+        # 🎯 Info abandon si applicable
+        abandon_player_id = result.get('abandon_player_id')
+        abandon_username = result.get('abandon_username')
 
-        # Récupérer le username du gagnant
-        winner_username = None
-        if winner_id:
-            winner_username = self.get_username(winner_id)
+        winner_username = self.get_username(winner_id) if winner_id else None
 
         await self.broadcast({
             "type": "game_finished",
             "reason": reason,
             "winner_id": winner_id,
             "winner_username": winner_username,
+            "loser_id": loser_id,
             "scores": scores,
+            "abandon_player_id": abandon_player_id,
+            "abandon_username": abandon_username,
         })
 
-        print(f"🏆 [{self._game_id}] Partie terminée. Gagnant: {winner_username or 'match nul'}")
+        print(f"🏆 [{self._game_id}] Partie terminée. Raison: {reason}, Gagnant: {winner_username or 'match nul'}")
 
     # async def on_player_disconnected(self, player_id: str) -> None:
     #     """Appelé quand un joueur se déconnecte."""

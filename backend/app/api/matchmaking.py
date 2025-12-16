@@ -129,7 +129,7 @@ async def reset_queues(
     get_current_user_id(token)
     deleted_keys: list[str] = []
 
-    async for key in redis_conn.scan_iter(f"{QUEUE_BASE_NAME}*"):
+    async for key in redis_conn.scan_iter(f"{QUEUE_KEY_PREFIX}*"):
         await redis_conn.delete(key)
         deleted_keys.append(_decode_if_bytes(key))
         print(f"🗑️ Clé supprimée: {key}")

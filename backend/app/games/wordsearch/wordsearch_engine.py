@@ -1,54 +1,19 @@
-# /backend/app/games/wordsearch/wordsearch_engine.py
-
 from typing import Any, Dict, List
-from enum import Enum
 
 from redis.asyncio import Redis as AsyncRedis
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.models.schemas import WordSearchState, WordSolution, Index, WordSearchSolutionData
+from app.models.schemas import WordSearchState, WordSolution, Index,WordSearchSolutionData
 from app.models.tables import GameSession, User
 from app.games.constants import GameStatus
-from app.games.constants import GAME_STATE_KEY_PREFIX, SOLUTION_KEY_PREFIX
-
-
-class WordDirection(str, Enum):
-    """Direction du mot dans la grille."""
-    HORIZONTAL_RIGHT = "horizontal_right"    # → Sens de lecture
-    HORIZONTAL_LEFT = "horizontal_left"      # ← Sens inverse
-    VERTICAL_DOWN = "vertical_down"          # ↓ Haut vers bas
-    VERTICAL_UP = "vertical_up"              # ↑ Bas vers haut
-    DIAGONAL_DOWN_RIGHT = "diagonal_down_right"  # ↘
-    DIAGONAL_DOWN_LEFT = "diagonal_down_left"    # ↙
-    DIAGONAL_UP_RIGHT = "diagonal_up_right"      # ↗
-    DIAGONAL_UP_LEFT = "diagonal_up_left"        # ↖
-    SINGLE_LETTER = "single_letter"          # Un seul caractère
+from app.games.constants import GAME_STATE_KEY_PREFIX,SOLUTION_KEY_PREFIX
 
 
 class WordSearchEngine:
     """Gère la logique de validation du jeu Mot-Mêlé."""
 
-    # =========================================================================
-    # SYSTÈME DE POINTS
-    # =========================================================================
-    
-    # Points de base par direction (du plus facile au plus difficile)
-    DIRECTION_POINTS: Dict[WordDirection, int] = {
-        WordDirection.SINGLE_LETTER: 0,           # Pas de points pour une lettre
-        WordDirection.HORIZONTAL_RIGHT: 5,        # → Facile (sens de lecture)
-        WordDirection.HORIZONTAL_LEFT: 8,         # ← Moyen (sens inverse)
-        WordDirection.VERTICAL_DOWN: 10,          # ↓ Moyen+
-        WordDirection.VERTICAL_UP: 12,            # ↑ Difficile
-        WordDirection.DIAGONAL_DOWN_RIGHT: 15,    # ↘ Difficile
-        WordDirection.DIAGONAL_DOWN_LEFT: 18,     # ↙ Très difficile
-        WordDirection.DIAGONAL_UP_RIGHT: 18,      # ↗ Très difficile
-        WordDirection.DIAGONAL_UP_LEFT: 20,       # ↖ Expert
-    }
-
-    # Bonus par longueur de mot
-    LENGTH_BONUS_THRESHOLD = 5  # Bonus à partir de 5 lettres
-    LENGTH_BONUS_PER_LETTER = 2  # +2 points par lettre au-delà du seuil
+    POINTS_PER_WORD = 10
 
     def __init__(
         self,
@@ -61,75 +26,6 @@ class WordSearchEngine:
         self._redis = redis_client
         self._solution_data_cache: WordSearchSolutionData | None = None
 
-    # =========================================================================
-    # CALCUL DE DIRECTION ET POINTS
-    # =========================================================================
-
-    @staticmethod
-    def _determine_direction(start: Index, end: Index) -> WordDirection:
-        """
-        Détermine la direction du mot basée sur les indices de début et fin.
-        """
-        delta_r = end.row - start.row
-        delta_c = end.col - start.col
-
-        # Cas d'une seule lettre
-        if delta_r == 0 and delta_c == 0:
-            return WordDirection.SINGLE_LETTER
-
-        # Horizontal
-        if delta_r == 0:
-            return WordDirection.HORIZONTAL_RIGHT if delta_c > 0 else WordDirection.HORIZONTAL_LEFT
-
-        # Vertical
-        if delta_c == 0:
-            return WordDirection.VERTICAL_DOWN if delta_r > 0 else WordDirection.VERTICAL_UP
-
-        # Diagonal
-        if delta_r > 0 and delta_c > 0:
-            return WordDirection.DIAGONAL_DOWN_RIGHT  # ↘
-        elif delta_r > 0 and delta_c < 0:
-            return WordDirection.DIAGONAL_DOWN_LEFT   # ↙
-        elif delta_r < 0 and delta_c > 0:
-            return WordDirection.DIAGONAL_UP_RIGHT    # ↗
-        else:
-            return WordDirection.DIAGONAL_UP_LEFT     # ↖
-
-    def _calculate_points(self, word: str, direction: WordDirection) -> Dict[str, Any]:
-        """
-        Calcule les points pour un mot trouvé.
-        
-        Returns:
-            Dict avec le détail des points:
-            - base_points: Points de base pour la direction
-            - length_bonus: Bonus de longueur
-            - total_points: Total
-            - direction: La direction détectée
-        """
-        # Points de base selon la direction
-        base_points = self.DIRECTION_POINTS.get(direction, 5)
-
-        # Bonus de longueur
-        word_length = len(word)
-        length_bonus = 0
-        if word_length > self.LENGTH_BONUS_THRESHOLD:
-            extra_letters = word_length - self.LENGTH_BONUS_THRESHOLD
-            length_bonus = extra_letters * self.LENGTH_BONUS_PER_LETTER
-
-        total_points = base_points + length_bonus
-
-        return {
-            "base_points": base_points,
-            "length_bonus": length_bonus,
-            "total_points": total_points,
-            "direction": direction.value,
-            "word_length": word_length,
-        }
-
-    # =========================================================================
-    # MÉTHODES DE GESTION DE L'ÉTAT (I/O)
-    # =========================================================================
-
     async def _get_solution_data(self) -> WordSearchSolutionData:
         """Récupère les solutions depuis Redis (avec cache)."""
         if self._solution_data_cache is None:
@@ -138,6 +34,10 @@ class WordSearchEngine:
                 raise ValueError(f"Solutions non trouvées pour {self._game_id}.")
             self._solution_data_cache = WordSearchSolutionData.model_validate_json(json_data)
         return self._solution_data_cache
+
+    
+
+    # --- MÉTHODES DE GESTION DE L'ÉTAT (I/O) ---
 
     async def _get_game_state(self) -> WordSearchState:
         """Récupère l'état actuel de la partie depuis Redis."""
@@ -202,22 +102,27 @@ class WordSearchEngine:
             letters.append(grid[row][col])
 
         return "".join(letters).upper()
+    
+
 
     # =========================================================================
     # VALIDATION ET SCORING
     # =========================================================================
 
     async def check_all_solutions_found(self):
+        print("appelle de check_all_solution_found dans engine")
         """Vérifie si toutes les solutions ont été trouvées."""
         state = await self._get_game_state()
         solution_data = await self._get_solution_data()
 
         total_found = len([word for sublist in state.words_found.values() for word in sublist])
-        
+        print(f"{total_found} solution trouvée")
         if total_found >= len(solution_data.solutions):
-            return await self.finalize_game("all_solutions_found")
+
+            return await self.finalize_game(reason="completed")
         
         return None
+
 
     async def validate_selection(
         self,
@@ -226,7 +131,7 @@ class WordSearchEngine:
     ) -> Dict[str, Any]:
         """Vérifie si le mot sélectionné est valide et met à jour l'état."""
         state = await self._get_game_state()
-        solution_data = await self._get_solution_data()
+        solution_data = await self._get_solution_data()  # ← Utilise le cache
 
         # 1. Reconstruction et vérification anti-triche
         try:
@@ -243,7 +148,7 @@ class WordSearchEngine:
         # 2. Vérification que le mot est une solution
         is_valid_solution = any(
             selected_obj.word.upper() == sol.word.upper()
-            for sol in solution_data.solutions
+            for sol in solution_data.solutions  # ← Utilise solution_data
         )
 
         if not is_valid_solution:
@@ -258,35 +163,33 @@ class WordSearchEngine:
         if already_found:
             return {"success": False, "reason": "Mot déjà trouvé."}
 
-        # 4. 🎯 Calcul des points selon la direction
-        direction = self._determine_direction(selected_obj.start_index, selected_obj.end_index)
-        points_detail = self._calculate_points(selected_obj.word, direction)
-        points_earned = points_detail["total_points"]
-
-        # 5. Mise à jour atomique
+        # 4. Mise à jour atomique
         current_score = state.realtime_score.get(player_id, 0)
-        new_score = current_score + points_earned
+        new_score = current_score + self.POINTS_PER_WORD
         state.realtime_score[player_id] = new_score
 
         player_words = state.words_found.setdefault(player_id, [])
         player_words.append(selected_obj)
+
 
         await self._save_game_state(state)
 
         return {
             "success": True,
             "new_solution": selected_obj.model_dump(),
-            "points_detail": points_detail,  # 🎯 Détail des points
-            "points_earned": points_earned,
+            "score_update": self.POINTS_PER_WORD,
             "new_score": new_score,
         }
+    async def finalize_game(self, abandon_player_id: str | None = None,reason = 'timeout') -> Dict[str, Any]:
 
-    # =========================================================================
-    # FINALISATION
-    # =========================================================================
-
-    async def finalize_game(self, reason: str) -> Dict[str, Any]:
-        """Finalise la partie et enregistre les résultats en base."""
+        print(f"appelle de finalize game reason : {reason}")
+        """
+        Finalise la partie et enregistre les résultats en base.
+        
+        Args:
+            abandon_player_id: Si fourni, ce joueur a abandonné et perd automatiquement.
+        """
+        # 1. Récupérer l'état final
         try:
             final_state = await self._get_game_state()
         except ValueError:
@@ -295,15 +198,39 @@ class WordSearchEngine:
         final_scores = final_state.realtime_score
         player_ids = list(final_scores.keys())
 
+        if len(player_ids) < 2:
+            return {"status": "error", "detail": "Pas assez de joueurs."}
+
         player_a_id, player_b_id = player_ids[0], player_ids[1]
         score_a = final_scores.get(player_a_id, 0)
         score_b = final_scores.get(player_b_id, 0)
 
-        winner_id, loser_id = self._determine_winner(
-            player_a_id, score_a, player_b_id, score_b
-        )
+        # 2. Déterminer le vainqueur
+        if abandon_player_id:
+            # 🎯 CAS ABANDON: Le joueur qui abandonne perd
+            loser_id = abandon_player_id
+            winner_id = player_b_id if abandon_player_id == player_a_id else player_a_id
+        else:
+            # Cas normal: déterminer par les scores
+            winner_id, loser_id = self._determine_winner(
+                player_a_id, score_a, player_b_id, score_b
+            )
 
-        # Nettoyage Redis
+        # # 3. Transaction DB
+        # try:
+        #     await self._persist_results(
+        #         player_a_id=player_a_id,
+        #         player_b_id=player_b_id,
+        #         winner_id=winner_id,
+        #         loser_id=loser_id,
+        #         final_scores=final_scores,
+        #         final_state=final_state,
+        #     )
+        # except Exception as e:
+        #     await self._db_session.rollback()
+        #     return {"status": "error", "detail": f"Échec DB: {e}"}
+
+        # 4. Nettoyage Redis
         await self._redis.delete(f"{GAME_STATE_KEY_PREFIX}{self._game_id}")
 
         return {
@@ -314,6 +241,7 @@ class WordSearchEngine:
             "reason": reason,
         }
 
+    
     @staticmethod
     def _determine_winner(
         player_a_id: str,
@@ -326,7 +254,58 @@ class WordSearchEngine:
             return player_a_id, player_b_id
         elif score_b > score_a:
             return player_b_id, player_a_id
-        return None, None
+        return None, None  # Match nul
+
+    async def _persist_results(
+        self,
+        player_a_id: str,
+        player_b_id: str,
+        winner_id: str | None,
+        loser_id: str | None,
+        final_scores: Dict[str, int],
+        final_state: WordSearchState,
+    ) -> None:
+        """Persiste les résultats en base de données."""
+        # Récupérer la session de jeu
+        result = await self._db_session.exec(
+            select(GameSession).where(GameSession.game_id == self._game_id)
+        )
+        game_session = result.first()
+
+        if not game_session:
+            raise ValueError("GameSession non trouvée.")
+
+        # Récupérer les utilisateurs
+        user_result = await self._db_session.exec(
+            select(User).where(User.user_id.in_([player_a_id, player_b_id]))
+        )
+        users = {user.user_id: user for user in user_result.all()}
+
+        if len(users) < 2:
+            raise ValueError("Utilisateurs non trouvés.")
+
+        # Mise à jour de la GameSession
+        game_session.status = GameStatus.GAME_FINISHED
+        game_session.game_data = final_state.model_dump()
+        game_session.winner_id = winner_id
+
+        # Mise à jour des stats joueurs
+        for user_id, user in users.items():
+
+            if user_id == winner_id:
+                user.victories += 1
+            elif user_id == loser_id:
+                user.defeats += 1
+            # Match nul: seuls les points sont ajoutés
+
+        await self._db_session.commit()
+
+
+       
+
+
+
+
 
 """
 

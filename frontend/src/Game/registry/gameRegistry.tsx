@@ -12,7 +12,6 @@ import {  Zap } from 'lucide-react';
  * 2. L'ajouter ici avec sa configuration
  */
 
-
 export const GAME_REGISTRY: Record<string, GameConfig> = {
     wordsearch: {
         id:'wordsearch',

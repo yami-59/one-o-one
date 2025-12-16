@@ -2,6 +2,7 @@
 
 import { type GameStatusType} from '../../shared/GameMessages';
 import { useContext,createContext } from "react";
+import { type GameFinishedMessage } from '../types/GameInterface';
 
 // =============================================================================
 // TYPES
@@ -30,6 +31,7 @@ export interface GameContextValue {
     opponent: Player | null;
     ws: WebSocket | null;
     gameData: unknown;
+    finishedData:GameFinishedMessage|null;
 
     // ─────────────────────────────────────────────────────────────────────────
     // ACTIONS
@@ -48,6 +50,7 @@ export interface GameContextValue {
     setOpponent: React.Dispatch<React.SetStateAction<Player | null>>;
     setGameData: React.Dispatch<React.SetStateAction<unknown>>;
     setStartTimeStamp:React.Dispatch<React.SetStateAction<number|null>>;
+    setGameFinishedData:React.Dispatch<React.SetStateAction<GameFinishedMessage|null>>;
 }
 
 

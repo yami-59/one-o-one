@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import {  Trophy, Users } from 'lucide-react';
-import MatchMakingButton from '../components/MatchmakingButton'
+import {MatchmakingLobby} from '../components/MatchmakingButton'
 import Navbar from '../components/Navbar';
 import Login from '../components/Login';
 import { useAuth } from '../auth/AuthContext';
@@ -91,7 +91,7 @@ export default function LobbyPage() {
                         </p>
                         <p className="text-gray-500 text-sm mb-6">{selectedGame.description}</p>
 
-                        <MatchMakingButton token={auth.token} isAuthenticated={auth.isAuthenticated} game_name={selectedGame.id} setShowLoginModal={setShowLoginModal} />
+                        <MatchmakingLobby token={auth.token} isAuthenticated={auth.isAuthenticated} gameName={selectedGame.id} onAuthRequired={() => setShowLoginModal(true)} />
                     </div>
                 </div>
 
