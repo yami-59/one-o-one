@@ -1,7 +1,7 @@
 // /frontend/src/game/components/GameOverlay.tsx
 
 import { Trophy, Home, Crown, Frown, Handshake,Flag } from 'lucide-react';
-import {MatchMakingOverlay} from '../../components/MatchmakingButton';
+import {MatchMakingOverlay} from './MatchmakingButton';
 import { type GameFinishedMessage } from '../types/GameInterface';
 import type { SoundType } from '../types/GameInterface';
 import { useEffect } from 'react';

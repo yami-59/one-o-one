@@ -1,7 +1,7 @@
 // /frontend/src/components/matchmakingButton.tsx
 
-import { useMatchmaking } from "../Game/hooks/useMatchMaking";
-import { type MatchMakingProps } from "../Game/hooks/useMatchMaking";
+import { useMatchmaking } from "../hooks/useMatchMaking";
+import { type MatchMakingProps } from "../hooks/useMatchMaking";
 import { Search, Loader2 } from 'lucide-react';
 
 

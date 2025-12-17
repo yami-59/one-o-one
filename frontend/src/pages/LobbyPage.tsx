@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import {  Trophy, Users } from 'lucide-react';
-import {MatchmakingLobby} from '../components/MatchmakingButton'
+import {MatchmakingLobby} from '../Game/components/MatchmakingButton'
 import Navbar from '../components/Navbar';
 import Login from '../components/Login';
 import { useAuth } from '../auth/AuthContext';
