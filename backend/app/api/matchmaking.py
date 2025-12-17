@@ -96,7 +96,7 @@ async def check_match(
     match_notification = await redis_conn.get(notification_key)
 
     if not match_notification:
-        return QueueResponse(status="waiting")
+        return QueueResponse(status="waiting",player_id=player_id)
 
     # Supprimer la notification pour éviter la réutilisation
     await redis_conn.delete(notification_key)

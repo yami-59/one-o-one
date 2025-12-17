@@ -137,6 +137,8 @@ export function useMatchmaking({
                 { game_name: gameName }
             );
 
+            console.log(response)
+
             if (!isMountedRef.current) return;
 
             if (!response) {
@@ -172,12 +174,14 @@ export function useMatchmaking({
         setIsLoading(true);
 
         try {
-            await apiRequest<MatchmakingResponse>(
+            const response = await apiRequest<MatchmakingResponse>(
                 "/matchmaking/leave",
                 token,
                 "POST",
                 { game_name: gameName }
             );
+
+            console.log(response)
 
             if (isMountedRef.current) {
                 setStatus('idle');
@@ -217,6 +221,8 @@ export function useMatchmaking({
                 token,
                 "GET"
             );
+
+            console.log(response)
 
             if (!isMountedRef.current) return;
 

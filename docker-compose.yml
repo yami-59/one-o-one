@@ -11,8 +11,10 @@ services:
       dockerfile: Dockerfile
     image: oneoone_frontend:latest
     container_name: oneoone_frontend
-    extra_hosts:
-    - "host.docker.internal:host-gateway"  # ← Ajouter cette ligne
+    env_file:
+    - frontend/.env.production
+    - frontend/.env.development
+
     # Mapper le port 80 du conteneur (Nginx) au port 80 de l'hôte (Web standard)
     ports:
       - "8080:80"
@@ -30,7 +32,6 @@ services:
       dockerfile: Dockerfile
     image: oneoone_backend:latest
     container_name: oneoone_api
-    
     # Lire les variables d'environnement de la DB distante/locale et Redis
     env_file:
       - ./backend/.env.local

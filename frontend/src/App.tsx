@@ -3,7 +3,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 // import Exemple from './pages/exemple.tsx';
 import GamePage from './pages/GamePage.tsx';
-import AdminPage from './pages/AdminPage'; 
 import LobbyPage from './pages/LobbyPage';
 function App() {
     return (
@@ -16,7 +15,6 @@ function App() {
 
                 <Route path="/lobby" element={<LobbyPage />} />
                 <Route path="/game/:id" element={<GamePage />} />
-                <Route path="/admin" element={<AdminPage />} /> 
                 
                 {/* Redirections par défaut */}
                 <Route path="/" element={<Navigate to="/lobby" replace />} />

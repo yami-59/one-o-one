@@ -5,6 +5,13 @@
 # -----------------------------------------------------------
 FROM python:3.11-slim AS builder
 
+# Installer les dépendances système pour psycopg2
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+
 # Définir le répertoire de travail
 WORKDIR /install
 
@@ -36,10 +43,7 @@ COPY app /backend/app
 
 
 
-# 3. Commande par défaut lors du démarrage du conteneur (API principale)
-# Ne pas utiliser --reload en production
-# Exécution au moment du build
-RUN python -m app.sql.db_manager create && \
-    python -m app.sql.db_manager seed
+COPY entrypoint.sh /backend/entrypoint.sh
+RUN chmod +x /backend/entrypoint.sh
+ENTRYPOINT ["/backend/entrypoint.sh"]
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

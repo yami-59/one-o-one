@@ -16,13 +16,6 @@ RUN npm ci
 # 3. Copier le code source
 COPY . .
 
-# 4. Build arguments pour les variables d'environnement Vite
-ARG VITE_API_BASE_URL=/api/v1
-ARG VITE_WS_BASE_URL=ws://localhost/api/v1/ws/game
-
-ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
-ENV VITE_WS_BASE_URL=$VITE_WS_BASE_URL
-
 # 5. Exécuter le build de production de Vite
 RUN npm run build
 
@@ -39,7 +32,7 @@ RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/nginx.conf
 
 # 3. Copier les fichiers statiques COMPILÉS depuis le STAGE 1
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /frontend/dist /usr/share/nginx/html
 
 # 4. Créer une page d'erreur 50x basique
 RUN echo '<!DOCTYPE html><html><head><title>Erreur</title></head><body><h1>Service temporairement indisponible</h1></body></html>' > /usr/share/nginx/html/50x.html
