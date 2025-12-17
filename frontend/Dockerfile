@@ -5,7 +5,7 @@
 # -----------------------------------------------------------
 FROM node:20-alpine AS builder
 
-WORKDIR /app
+WORKDIR /frontend
 
 # 1. Copier les fichiers de dépendances
 COPY package.json package-lock.json ./

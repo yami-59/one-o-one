@@ -8,10 +8,17 @@
 
 # Ignore tous les fichiers et dossiers commençant par un point
 .*
+
+
+
 # Sauf les fichiers de configuration nécessaires au dépôt
-# !.gitignore
-# !.gitattributes
-# !.gitkeep
+!.gitignore
+!.gitattributes
+!.gitkeep
+!.env*
+
+
+
 
 # === Git-related files ===
 .git/

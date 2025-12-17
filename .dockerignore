@@ -1,0 +1,35 @@
+# /.dockerignore
+
+# ----------------------------------------------------
+# 1. DEPENDANCES ET OUTILS DE DEVELOPPEMENT
+# ----------------------------------------------------
+# Exclut le dossier principal des librairies installées par npm
+node_modules
+
+# Exclut le cache de npm
+npm-debug.log
+.npm/
+
+# ----------------------------------------------------
+# 2. FICHIERS DE CONFIGURATION LOCALE
+# ----------------------------------------------------
+# Exclut les fichiers d'environnement locaux (qui peuvent contenir des secrets)
+.env
+.env.local
+.env.*.local
+
+
+# ----------------------------------------------------
+# 3. FICHIERS GENERES PAR LE BUILD / TESTS
+# ----------------------------------------------------
+# Exclut les dossiers générés par Vite pour le build de développement/test
+# Le dossier 'dist' est copié uniquement dans l'étape finale du build multi-étapes
+dist
+build
+coverage
+
+# ----------------------------------------------------
+# 4. Git et autres (si non géré par le .gitignore principal)
+# ----------------------------------------------------
+.git
+.gitignore

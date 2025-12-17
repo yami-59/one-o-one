@@ -1,0 +1,8 @@
+# /backend/.dockerignore
+
+.venv
+__pycache__
+*.pyc
+# 🎯 N'ajoute PAS ce fichier à l'image :
+.env.local
+sql

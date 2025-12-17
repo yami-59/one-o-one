@@ -55,8 +55,6 @@ services:
     volumes:
       - redis_data:/data
 
-    ports:
-      - "6379:6379"
       
     # N'expose PAS son port 6379 publiquement.
     networks:
@@ -72,8 +70,7 @@ services:
       POSTGRES_USER: user_db
       POSTGRES_PASSWORD: password
       POSTGRES_DB: oneoone_db
-    ports:
-      - "5432:5432"
+
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:

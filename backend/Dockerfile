@@ -31,11 +31,15 @@ ENV PATH="/root/.local/bin:${PATH}"
 COPY --from=builder /root/.local /root/.local 
 
 # 2. Copier le code source de l'application (Dossier 'app')
-WORKDIR /app
-COPY app /app/app
-# Si vous avez des fichiers de configuration non-Python (comme alembic.ini), copiez-les aussi
-COPY alembic.ini .
+WORKDIR /backend
+COPY app /backend/app
+
+
 
 # 3. Commande par défaut lors du démarrage du conteneur (API principale)
 # Ne pas utiliser --reload en production
+# Exécution au moment du build
+RUN python -m app.sql.db_manager create && \
+    python -m app.sql.db_manager seed
+
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -24,10 +24,10 @@ const AVAILABLE_GAMES: GameConfig[] = [
 ];
 
 const TOP_PLAYERS = [
-    { name: 'AlphaWolf', score: 2400 },
-    { name: 'Yami.59', score: 2150 },
-    { name: 'WordMaster', score: 1980 },
-    { name: 'Pixel', score: 1800 },
+    { name: 'AlphaWolf', victories: 2400 },
+    { name: 'Yami.59', victories: 2150 },
+    { name: 'WordMaster', victories: 1980 },
+    { name: 'Pixel', victories: 1800 },
 ];
 
 
@@ -120,7 +120,7 @@ export default function LobbyPage() {
                                     </span>
                                     <span className="font-medium text-gray-200">{player.name}</span>
                                 </div>
-                                <span className="text-brand-pink font-bold">{player.score}</span>
+                                <span className="text-brand-pink font-bold">{player.victories}</span>
                             </div>
                         ))}
                     </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Send } from 'lucide-react';
 import { CELL_SIZE,GAP_SIZE } from '../constants';
-import Div from '../../components/divWrapper';
+import Div from '../../components/DivWrapper';
 
 
 interface SidePanelProps {
