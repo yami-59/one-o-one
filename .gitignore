@@ -79,14 +79,6 @@ out/
 # 3. FICHIERS SECRETS ET LOCAUX
 # ==================================
 
-<<<<<<< HEAD
-=======
-
-
-# Fichiers de configuration spécifiques à l'utilisateur et non committables
-.local
->>>>>>> feature/frontend-v2
-
 # === Clés/Secrets ===
 *.key
 *.pem
