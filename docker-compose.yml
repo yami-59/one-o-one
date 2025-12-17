@@ -14,7 +14,14 @@ services:
     env_file:
     - frontend/.env.production
     - frontend/.env.development
-
+    depends_on:
+      api_service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     # Mapper le port 80 du conteneur (Nginx) au port 80 de l'hôte (Web standard)
     ports:
       - "8080:80"
@@ -35,13 +42,13 @@ services:
     # Lire les variables d'environnement de la DB distante/locale et Redis
     env_file:
       - ./backend/.env.local
-      
     # IMPORTANT: Démarre APRÈS Redis et (si local) PostgreSQL
     depends_on:
-      - redis_cache
-      # - postgres_db # Si vous utilisez une DB locale
-      
-    # N'expose PAS son port 8000 publiquement. Il est accessible uniquement via le réseau interne.
+      redis_cache : 
+        condition: service_healthy
+      postgres_db : 
+        condition: service_healthy
+    restart: always
     networks:
       - backend_network
       
@@ -51,12 +58,14 @@ services:
   redis_cache:
     image: redis:7-alpine
     container_name: oneoone_redis
-    
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     # Persistance des données de cache Redis
     volumes:
       - redis_data:/data
-
-      
     # N'expose PAS son port 6379 publiquement.
     networks:
       - backend_network
@@ -71,7 +80,11 @@ services:
       POSTGRES_USER: user_db
       POSTGRES_PASSWORD: password
       POSTGRES_DB: oneoone_db
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_db -d oneoone_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -83,15 +96,10 @@ services:
 # -----------------------------------------------------------
 volumes:
   # Volume pour les données de Redis (le cache)
-  redis_data:
-    # driver: local (implicite si pas de service cloud)
-    
-  # Si vous décidez de revenir à une DB locale en production :
+  redis_data:    
   postgres_data: 
     driver: local 
-  #   # Ou un driver distant pour le cloud, comme RexRay ou un pilote NFS
 
 networks:
-  # Le réseau par défaut qui isole les services et permet la communication par nom
   backend_network:
-    driver: bridge # Le type de réseau par défaut pour l'isolation
+    driver: bridge 
