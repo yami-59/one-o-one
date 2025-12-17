@@ -41,9 +41,8 @@ COPY --from=builder /root/.local /root/.local
 WORKDIR /backend
 COPY app /backend/app
 
-
-
 COPY entrypoint.sh /backend/entrypoint.sh
-RUN chmod +x /backend/entrypoint.sh
+RUN apt-get update && apt-get install -y dos2unix && rm -rf /var/lib/apt/lists/*
+RUN dos2unix /backend/entrypoint.sh && chmod +x /backend/entrypoint.sh
 ENTRYPOINT ["/backend/entrypoint.sh"]
 
