@@ -45,7 +45,7 @@ pnpm-lock.yaml
 venv/
 .venv/
 env/
-.env/
+
 
 # Fichiers compilés
 __pycache__/
@@ -79,6 +79,13 @@ out/
 # 3. FICHIERS SECRETS ET LOCAUX
 # ==================================
 
+<<<<<<< HEAD
+=======
+
+
+# Fichiers de configuration spécifiques à l'utilisateur et non committables
+.local
+>>>>>>> feature/frontend-v2
 
 # === Clés/Secrets ===
 *.key
