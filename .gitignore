@@ -6,16 +6,12 @@
 # 1. CORE FILES & VERSION CONTROL
 # ==================================
 
-# Ignore tous les fichiers et dossiers commençant par un point
-.*
-
 
 
 # Sauf les fichiers de configuration nécessaires au dépôt
 !.gitignore
 !.gitattributes
 !.gitkeep
-!.env*
 
 
 
@@ -83,14 +79,6 @@ out/
 # 3. FICHIERS SECRETS ET LOCAUX
 # ==================================
 
-# === Env files ===
-.env
-.env.*
-# Exclure explicitement le fichier d'exemple si vous en avez un
-!.env.example
-
-# Fichiers de configuration spécifiques à l'utilisateur et non committables
-.env.local
 
 # === Clés/Secrets ===
 *.key
