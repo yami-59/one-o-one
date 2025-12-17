@@ -82,8 +82,7 @@ out/
 
 
 
-# Fichiers de configuration spécifiques à l'utilisateur et non committables
-.local
+
 
 # === Clés/Secrets ===
 *.key
