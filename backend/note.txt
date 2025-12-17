@@ -1,0 +1,4 @@
+# formater et nettoyé le code 
+
+isort .
+black .

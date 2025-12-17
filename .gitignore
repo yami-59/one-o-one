@@ -1,8 +1,124 @@
-# Ignore tous les fichiers et dossiers qui commencent par un point
-# (dotfiles, .DS_Store, .vscode, .idea, etc.)
-.*
+# ----------------------------------------------------------------------
+# FICHIER .gitignore POUR UN PROJET FULL-STACK (Node.js/Python/Web)
+# ----------------------------------------------------------------------
 
-# EXCEPTION : N'ignore PAS les fichiers essentiels de Git
-!/.gitignore
-!/.gitattributes
-!/.gitkeep
+# ==================================
+# 1. CORE FILES & VERSION CONTROL
+# ==================================
+
+
+
+# Sauf les fichiers de configuration nécessaires au dépôt
+!.gitignore
+!.gitattributes
+!.gitkeep
+
+
+
+
+# === Git-related files ===
+.git/
+.git/hooks/*
+.git/info/exclude
+.git/logs/
+
+# === System files ===
+.DS_Store
+Thumbs.db
+
+# ==================================
+# 2. DEPENDANCES ET BUILD OUTPUTS
+# ==================================
+
+# === Node.js ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+pnpm-lock.yaml
+.pnpm-store/
+
+# === Python / Environnement Virtuel ===
+# Environnements virtuels
+venv/
+.venv/
+
+
+
+# Fichiers compilés
+__pycache__/
+*.pyc
+*.pyd
+*.so
+
+# Fichiers de test
+.pytest_cache/
+htmlcov/
+.coverage
+
+# === Build outputs (Common) ===
+dist/
+build/
+out/
+.cache/
+coverage/
+
+# === React/Next.js specific ===
+.next/
+.vercel/
+.firebase/
+.turbo/
+out/
+
+# === TypeScript ===
+*.tsbuildinfo
+
+# ==================================
+# 3. FICHIERS SECRETS ET LOCAUX
+# ==================================
+
+# === Clés/Secrets ===
+*.key
+*.pem
+*.p12
+
+# ==================================
+# 4. FICHIERS TEMPONAIRES ET LOGS
+# ==================================
+
+# === Logs ===
+logs/
+*.log
+*.log.*
+log.txt
+*.sqlite3 # Base de données SQLite locale, souvent utilisée en dev/test
+
+# === Temp files ===
+tmp/
+temp/
+*.tmp
+*.temp
+
+# === Editor folders ===
+.vscode/
+.idea/
+*.swp
+*.bak
+*~
+
+# === OS Archives ===
+*.zip
+*.tar
+*.gz
+*.rar
+
+# === Miscellaneous ===
+*.pid
+*.seed
+*.pid.lock
+*.sess
+*.json.bak
+
+# === Divers (selon votre demande) ===
+*.pdf

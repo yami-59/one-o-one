@@ -1,0 +1,43 @@
+@import 'tailwindcss';
+@plugin "tailwind-scrollbar";
+
+
+
+/* Configuration de ton thème (Couleurs du Logo) */
+@theme {
+  --color-brand-pink: #EC4899;  /* Le Rose du logo */
+  --color-brand-blue: #3B82F6;  /* Le Bleu du logo */
+  --color-brand-yellow: #F59E0B; /* Le Jaune (Or) */
+  --color-dark-bg: #111827;     /* Fond sombre */
+  --color-dark-card: #1F2937;   /* Fond des cartes */
+}
+
+/* Styles de base */
+body {
+  background-color: var(--color-dark-bg);
+  color: white;
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+h1 {
+  font-size: 3.2em;
+}
+
+
+/* Scrollbar pour Chrome, Edge, Safari */
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background:var(--bg-purple);  /* Couleur du fond de la scrollbar */
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #eeeeee;   /* Couleur du curseur de scroll */
+  border-radius: 10px;
+  border: 2px solid #f3f4f6;   /* Donne un effet de "padding" autour du thumb */
+}
+
+/* /frontend/src/index.css */
