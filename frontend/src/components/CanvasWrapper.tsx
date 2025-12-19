@@ -9,7 +9,7 @@ Ce composant sert juste à mettre du css inline sans afficher le message de warn
 
 
 
-interface DivProp {
+interface CanvasProp {
     // 1. Utilisez le type TypeScript React pour le contenu
     children?: ReactNode;
 
@@ -17,16 +17,16 @@ interface DivProp {
     [key: string]: unknown; // Permet aux autres props d'être passées
 }
 // 1. Définition du composant fonctionnel
-const Div = ({ children,...rest }: DivProp) => {
+const Canvas = ({ children,...rest }: CanvasProp) => {
     // Le composant rend simplement un div
     return (
-        <div
+        <canvas
 
             {...rest}
         >
             {children}
-        </div>
+        </canvas>
     );
 };
 
-export default Div;
+export default Canvas;

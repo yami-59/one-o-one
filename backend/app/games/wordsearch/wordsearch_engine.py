@@ -115,10 +115,11 @@ class WordSearchEngine:
         state = await self._get_game_state()
         solution_data = await self._get_solution_data()
 
-        total_found = len([word for sublist in state.words_found.values() for word in sublist])
-        print(f"{total_found} solution trouvée")
+        # 🎯 FIX: words_found est une liste plate de WordSolution
+        total_found = len(state.words_found)
+        print(f"{total_found} solution(s) trouvée(s)")
+        
         if total_found >= len(solution_data.solutions):
-
             return await self.finalize_game(reason="completed")
         
         return None
@@ -156,8 +157,8 @@ class WordSearchEngine:
 
         # 3. Vérification que le mot n'a pas déjà été trouvé
         already_found = any(
-            selected_obj.word.upper() in [w.word.upper() for w in words]
-            for words in state.words_found.values()
+            selected_obj.word.upper() == solution.word.upper()
+            for solution in state.words_found
         )
 
         if already_found:
@@ -168,9 +169,9 @@ class WordSearchEngine:
         new_score = current_score + self.POINTS_PER_WORD
         state.realtime_score[player_id] = new_score
 
-        player_words = state.words_found.setdefault(player_id, [])
-        player_words.append(selected_obj)
+        selected_obj.found_by = player_id
 
+        state.words_found.append(selected_obj)
 
         await self._save_game_state(state)
 
@@ -180,6 +181,63 @@ class WordSearchEngine:
             "score_update": self.POINTS_PER_WORD,
             "new_score": new_score,
         }
+    async def validate_selection(
+    self,
+    player_id: str,
+    selected_obj: WordSolution,
+    ) -> Dict[str, Any]:
+        """Vérifie si le mot sélectionné est valide et met à jour l'état."""
+        state = await self._get_game_state()
+        solution_data = await self._get_solution_data()
+
+        # 1. Reconstruction et vérification anti-triche
+        try:
+            reconstructed_word = self.reconstruct_word(state.grid_data, selected_obj)
+        except ValueError as e:
+            return {"success": False, "reason": str(e)}
+
+        if reconstructed_word != selected_obj.word.upper():
+            return {
+                "success": False,
+                "reason": "La sélection ne correspond pas au mot soumis.",
+            }
+
+        # 2. Vérification que le mot est une solution
+        is_valid_solution = any(
+            selected_obj.word.upper() == sol.word.upper()
+            for sol in solution_data.solutions
+        )
+
+        if not is_valid_solution:
+            return {"success": False, "reason": "Mot non valide dans cette partie."}
+
+        # 3. 🎯 FIX: Vérification que le mot n'a pas déjà été trouvé
+        already_found = any(
+            selected_obj.word.upper() == solution.word.upper()
+            for solution in state.words_found
+        )
+
+        if already_found:
+            return {"success": False, "reason": "Mot déjà trouvé."}
+
+        # 4. Mise à jour atomique
+        current_score = state.realtime_score.get(player_id, 0)
+        new_score = current_score + self.POINTS_PER_WORD
+        state.realtime_score[player_id] = new_score
+
+        selected_obj.found_by = player_id
+
+        state.words_found.append(selected_obj)
+
+        await self._save_game_state(state)
+
+        return {
+            "success": True,
+            "new_solution": selected_obj.model_dump(),
+            "score_update": self.POINTS_PER_WORD,
+            "new_score": new_score,
+        }
+    
     async def finalize_game(self, abandon_player_id: str | None = None,reason = 'timeout') -> Dict[str, Any]:
 
         print(f"appelle de finalize game reason : {reason}")
@@ -240,6 +298,8 @@ class WordSearchEngine:
             "scores": {player_a_id: score_a, player_b_id: score_b},
             "reason": reason,
         }
+
+
 
     
     @staticmethod

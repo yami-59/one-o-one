@@ -1,12 +1,8 @@
-// /frontend/src/pages/GamePage.tsx
-
-import { Volume2, VolumeX } from 'lucide-react';
+import { Volume2, VolumeX, Clock, User, Crown, Medal } from 'lucide-react';
+import Navbar from '../components/Navbar';
 import { useState, useEffect,useCallback,useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import Navbar from '../components/Navbar';
-import Scoreboard from '../components/Scoreboard';
-import Loading from './Loading';
-import { useAuth, type AuthContextValue } from '../auth/AuthContext';
+import { useAuth } from '../auth/AuthContext';
 import GameOverlay from '../Game/components/GameOverlay';
 import { GameStatus } from '../shared/GameMessages';
 import { useGame } from '../Game/context/GameContext';
@@ -16,37 +12,38 @@ import { useGameWebSocket } from '../Game/hooks/useGameWebSocket';
 import { type GameBaseData } from '../Game/types/GameInterface';
 import { useGameTimer } from '../Game/hooks/useGameTimer';
 import { createPlaySound } from '../Game/types/GameInterface';
-
-
+import Loader from '../components/Loader';
 
 // Helper pour formater le nom
 const formatPlayerName = (username: string | undefined, fallback: string): string => {
     if (!username) return fallback;
     return username.startsWith('guest-') ? 'guest' : username;
 };
+// Demo data
+const DEMO_DATA = {
+  player1: { name: 'TechMaster', score: 1250, avatar: '🎮' },
+  player2: { name: 'ProGamer', score: 980, avatar: '🏆' },
+  timeRemaining: '2:34',
+  status: 'in-progress', // 'waiting', 'countdown', 'in-progress', 'finished'
+  countdown: null,
+  gameType: 'Speed Challenge'
+};
 
-// =============================================================================
-// INNER COMPONENT (avec accès au contexte)
-// =============================================================================
 
-function GamePageInner({ auth }: { auth: AuthContextValue }) {
+
+function GamePageInner() {
+    const auth = useAuth();
     const navigate = useNavigate();
     const game = useGame();
     const duration = game.gameData ? (game.gameData as GameBaseData).game_duration : null;
-
     const [soundEnabled, setSoundEnabled] = useState(true);
-    const [showLoginModal, setShowLoginModal] = useState(false);  // 🎯 Pour MatchmakingButton
-    
     const { formattedTime } = useGameTimer(game.startTimeStamp, duration);
-
-    
-
     // 🎯 Crée la fonction playSound une seule fois
     const playSound = useMemo(() => createPlaySound(), []);
-
     const handleQuitButton = useCallback(() => {
         if (!game.ws || game.ws.readyState !== WebSocket.OPEN) {
             console.warn('WebSocket non connecté');
+
             return;
         }
 
@@ -60,119 +57,180 @@ function GamePageInner({ auth }: { auth: AuthContextValue }) {
         }
     }, [game]);
 
-
     // Récupérer la config du jeu
     const gameConfig = getGameConfig(game.gameName!);
 
+    useEffect(()=>{console.log(game.countdown)},[game])
     if (!gameConfig) {
         navigate('/')
         return 
     }
+
 
     const GameComponent = gameConfig.component;
 
     
 
 
-    return (
-        <div className="min-h-screen flex flex-col relative">
-            <Navbar {...auth} />
+  return (
 
-            {/* Overlay Countdown */}
-            {game.status === GameStatus.STARTING_COUNTDOWN && game.countdown !== null && (
-                <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center">
-                    <div className="text-9xl font-bold text-brand-yellow animate-pulse">
-                        {game.countdown}
+
+
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-purple-950 to-slate-900 text-white">
+      {/* Animated background effect */}
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl animate-pulse" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl animate-pulse delay-1000" />
+      </div>
+
+      {/* Main content */}
+      <div className="relative z-10">
+        <Navbar {...auth }></Navbar>
+
+   
+
+
+  
+        {/* Game area */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Modern Scoreboard */}
+          <div className="mb-8">
+            <div className="backdrop-blur-xl bg-white/5 rounded-2xl border border-white/10 p-6 shadow-2xl">
+              {/* Timer in center */}
+              <div className="flex justify-center mb-6">
+                <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-linear-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30">
+                  <Clock className="w-5 h-5 text-purple-300" />
+                  <span className="text-2xl font-mono tabular-nums tracking-wider text-purple-200">
+                    {formattedTime}
+                  </span>
+                </div>
+              </div>
+
+              {/* Players */}
+              <div className="grid grid-cols-3 gap-6 items-center">
+                {/* Player 1 */}
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-3xl shadow-lg shadow-blue-500/50 ring-4 ring-blue-400/20">
+                      {DEMO_DATA.player1.avatar}
                     </div>
-                </div>
-            )}
-
-            {/* Overlay Game Over */}
-            {game.status === GameStatus.FINISHED && game.finishedData !== null && (
-                <GameOverlay
-                    myScore={game.me?.score ?? 0}
-                    opponentScore={game.opponent?.score ?? 0}
-                    myName={formatPlayerName(game.me?.username, 'Moi')}
-                    opponentName={formatPlayerName(game.opponent?.username, 'Adversaire')}
-                    gameName={game.gameName!}
-                    token={auth.token}
-                    finishedData={game.finishedData}
-                    myId={game.me.id}
-                    isAuthenticated={auth.isAuthenticated}
-                    setShowLoginModal={setShowLoginModal}
-                    playSound={playSound}
-                    onLobby={() => navigate('/lobby')}
-                />
-            )}
-
-            {/* Overlay Waiting */}
-            {game.status === GameStatus.WAITING_FOR_OPPONENT && (
-                <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center">
-                    <div className="flex flex-col items-center space-y-4">
-                        <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-pink border-t-transparent" />
-                        <p className="text-white text-xl">En attente de l'adversaire...</p>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-linear-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center shadow-lg">
+                      <Crown className="w-4 h-4 text-white" />
                     </div>
-                </div>
-            )}
-
-            {/* Overlay Preparing */}
-            {game.status === GameStatus.PREPARING && (
-                <div className="absolute inset-0 z-40 bg-black/60 flex items-center justify-center">
-                    <div className="flex flex-col items-center space-y-4">
-                        <div className="h-12 w-12 animate-spin rounded-full border-4 border-brand-yellow border-t-transparent" />
-                        <p className="text-white text-xl">Préparation de la partie...</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center gap-1 justify-center mb-1">
+                      <User className="w-4 h-4 text-blue-400" />
+                      <span className="text-blue-300">{formatPlayerName(game.me?.username, 'Moi')}</span>
                     </div>
-                </div>
-            )}
-
-            <main className="grow p-4 md:p-6 max-w-7xl mx-auto w-full">
-                {/* Header : Scores + Timer + Sound */}
-                <div className="flex justify-between items-center mb-4">
-                    <Scoreboard
-                        p1Name={formatPlayerName(game.me?.username, 'Moi')}
-                        p2Name={formatPlayerName(game.opponent?.username, 'Adversaire')}
-                        p1Score={game.me?.score ?? 0}
-                        p2Score={game.opponent?.score ?? 0}
-                        timer={formattedTime}
-                    />
-                    <button
-                        onClick={() => setSoundEnabled(!soundEnabled)}
-                        className="ml-4 p-3 bg-gray-800 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition"
-                    >
-                        {soundEnabled ? <Volume2 /> : <VolumeX />}
-                    </button>
-                </div>
-
-                {/* Zone de jeu dynamique */}
-                <div className="grow">
-                    {game.status === GameStatus.IN_PROGRESS && <GameComponent playSound={playSound} />}
-                </div>
-                {/* 🚀 Bouton retour lobby */}
-                <button
-                    onClick={handleQuitButton}
-                    className="mt-20 px-4 py-2 bg-red-600 text-gray-900 rounded-lg hover:bg-yellow-400 transition"
-                >
-                    Abandonner
-                </button>
-
-            </main>
-
-            {/* 🎯 Modal de login si nécessaire (optionnel) */}
-            {showLoginModal && (
-                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center">
-                    <div className="bg-gray-800 p-6 rounded-lg">
-                        <p className="text-white mb-4">Vous devez être connecté pour jouer.</p>
-                        <button
-                            onClick={() => setShowLoginModal(false)}
-                            className="px-4 py-2 bg-brand-yellow text-gray-900 rounded-lg"
-                        >
-                            Fermer
-                        </button>
+                    <div className="text-3xl font-bold bg-linear-to-r from-blue-400 to-cyan-400 bg-clip-text text-transparent">
+                      {game.me?.score ?? 0}
                     </div>
+                  </div>
                 </div>
-            )}
+
+                {/* VS Badge */}
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <div className="w-16 h-16 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-xl shadow-purple-500/50">
+                      <span className="text-xl font-bold">VS</span>
+                    </div>
+                    <div className="absolute inset-0 rounded-full bg-linear-to-br from-purple-600 to-pink-600 animate-ping opacity-20" />
+                  </div>
+                </div>
+
+                {/* Player 2 */}
+                <div className="flex flex-col items-center gap-3">
+                  <div className="relative">
+                    <div className="w-20 h-20 rounded-2xl bg-linear-to-br from-pink-500 to-rose-500 flex items-center justify-center text-3xl shadow-lg shadow-pink-500/50 ring-4 ring-pink-400/20">
+                      {DEMO_DATA.player2.avatar}
+                    </div>
+                    <div className="absolute -top-2 -right-2 w-8 h-8 bg-linear-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center shadow-lg">
+                      <Medal className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center gap-1 justify-center mb-1">
+                      <User className="w-4 h-4 text-pink-400" />
+                      <span className="text-pink-300">{formatPlayerName(game.opponent?.username, 'Moi')}</span>
+                    </div>
+                    <div className="text-3xl font-bold bg-linear-to-r from-pink-400 to-rose-400 bg-clip-text text-transparent">
+                      {game.opponent?.score ?? 0}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Game Canvas Area */}
+          <GameComponent playSound={playSound}/>
+
+          {/* Action buttons */}
+          <div className="flex gap-4 justify-center mt-3">
+            <button 
+            onClick={handleQuitButton}
+            className="px-6 py-3 rounded-xl bg-linear-to-r from-red-500 to-rose-600 hover:from-red-600 hover:to-rose-700 transition-all duration-200 shadow-lg shadow-red-500/30 hover:shadow-xl hover:shadow-red-500/40 hover:scale-105 active:scale-95 border border-red-400/20">
+              Abandonner
+            </button>
+            <button
+                onClick={() => setSoundEnabled(!soundEnabled)}
+                className="ml-4 p-3 bg-gray-800 rounded-lg hover:bg-gray-700 text-gray-400 hover:text-white transition"
+              >
+                {soundEnabled ? <Volume2 /> : <VolumeX />}
+            </button>
+      
+          </div>
+        </main>
+      </div>
+
+      {/* Countdown Overlay */}
+      {game.status === GameStatus.STARTING_COUNTDOWN && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-9xl font-bold bg-linear-to-br from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent   animate-pulse drop-shadow-2xl">
+              {game.countdown}
+            </div>
+            <p className="mt-8 text-2xl text-gray-300">Préparez-vous...</p>
+          </div>
         </div>
-    );
+      )}
+
+      {/* Waiting Overlay */}
+      {game.status === GameStatus.WAITING_FOR_PLAYERS && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex flex-col items-center space-y-6">
+            <div className="relative">
+                <Loader  variant='dots' size='xl' fullscreen></Loader>
+                <div className="absolute inset-0 flex items-center justify-center">
+                <User className="w-8 h-8 text-purple-400" />
+              </div>
+            </div>
+            <p className="text-xl text-gray-200">En attente de l'adversaire...</p>
+            <p className="text-sm text-gray-400">Recherche d'un joueur de niveau similaire</p>
+          </div>
+        </div>
+      )}
+
+      {/* Overlay Game Over */}
+        {game.status === GameStatus.FINISHED && game.finishedData !== null && (
+            <GameOverlay
+                myScore={game.me?.score ?? 0}
+                opponentScore={game.opponent?.score ?? 0}
+                myName={formatPlayerName(game.me?.username, 'Moi')}
+                opponentName={formatPlayerName(game.opponent?.username, 'Adversaire')}
+                gameName={game.gameName!}
+                token={auth.token}
+                finishedData={game.finishedData}
+                myId={game.me.id}
+                isAuthenticated={auth.isAuthenticated}
+                playSound={playSound}
+                onLobby={() => navigate('/lobby')}
+            />
+        )}
+    </div>
+
+  );
 }
 
 // =============================================================================
@@ -197,7 +255,7 @@ export default function GamePage() {
     }, [auth, gameName, navigate]);
 
     if (auth.isLoading) {
-        return <Loading />;
+        return <Loader variant="dots" size="lg" fullscreen />;
     }
 
     if (!auth.isAuthenticated || !gameId || !gameName || !auth.userInfo) {
@@ -217,17 +275,19 @@ export default function GamePage() {
             username={auth.userInfo.username}
         >
             <GameWebSocketHandler />
-            <GamePageInner auth={auth} />
+            <GamePageInner />
         </GameProvider>
     );
 }
+
 
 // =============================================================================
 // WEBSOCKET HANDLER (séparé pour clarté)
 // =============================================================================
 
 function GameWebSocketHandler() {
-    const game = useGame();
-    useGameWebSocket(game);
-    return null;
+
+  const game = useGame()
+  useGameWebSocket(game);
+  return null;
 }

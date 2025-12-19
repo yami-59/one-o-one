@@ -8,7 +8,7 @@ import {
     type AuthData,
     type UserProps,
 } from './AuthContext';
-import Loading from '../pages/Loading';
+import Loader from '../components/Loader';
 
 // =============================================================================
 // CONSTANTS
@@ -178,7 +178,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // ─────────────────────────────────────────────────────────────────────────
 
     if (isLoading) {
-        return <Loading />;
+        return <Loader variant='dots'  size='xl' fullscreen></Loader>;
     }
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

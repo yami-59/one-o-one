@@ -78,6 +78,10 @@ out/
 # 3. FICHIERS SECRETS ET LOCAUX
 # ==================================
 
+
+
+
+
 # === Clés/Secrets ===
 *.key
 *.pem

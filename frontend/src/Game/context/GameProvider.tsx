@@ -1,6 +1,6 @@
 
 
-import {  useState, useCallback, type ReactNode,useEffect } from 'react';
+import {  useState, useCallback, type ReactNode } from 'react';
 import { type GameStatusType,GameStatus } from '../../shared/GameMessages';
 import { type GameContextValue ,type Player,GameContext} from './GameContext';
 import { type GameFinishedMessage } from '../types/GameInterface';
@@ -78,10 +78,7 @@ export default function GameProvider({ children, gameId, gameName, userId, usern
         setGameFinishedData,
     };
 
-    // 🎯 DEBUG
-    useEffect(() => {
-        console.log(`🌐 [GameProvider] ws state changé:`, ws ? `readyState=${ws.readyState}` : 'null');
-    }, [ws]);
+
 
     return (
         <GameContext.Provider value={value}>

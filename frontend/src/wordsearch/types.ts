@@ -8,6 +8,7 @@ export interface Point {
 
 export interface WordSolution extends GridIndexes{
     word:string
+    found_by:string;
 }
 
 // Interface pour les indices de grille
@@ -44,7 +45,7 @@ export interface CanvaDrawingProps {
     handleMouseUp: (e: React.MouseEvent<HTMLCanvasElement>) => void;
     isDrawing: boolean;
     myWord: string;
-    myOpponentWord: string;
+    opponentWord: string;
 }
 
 export interface WordSearchTableProps extends CanvaDrawingProps {
@@ -68,5 +69,5 @@ export interface WordSearchData extends GameBaseData {
   words_to_find: string[];
 
   // Mots trouvés par joueur
-  words_found: Record<string, WordSolution[]>; 
+  words_found:  WordSolution[]; 
 }

@@ -2,6 +2,11 @@ import Div from '../../components/DivWrapper';
 import { CELL_SIZE, GAP_SIZE } from '../constants';
 import { type GameGridProps } from '../types';
 
+
+// =============================================================================
+// GAME GRID COMPONENT
+// =============================================================================
+
 export default function GameGrid({
   gridData,
   canvasRef,
@@ -9,32 +14,33 @@ export default function GameGrid({
   handleMouseMove,
   handleMouseUp,
   myWord,
-  myOpponentWord,
-}: GameGridProps) {
+  opponentWord,
+}: GameGridProps)  {
   const gridSize = gridData.length;
-
-  // Calcul précis de la taille totale de la grille
-  // = (nombre de cellules × taille cellule) + (nombre de gaps × taille gap)
   const totalSize = gridSize * CELL_SIZE + (gridSize - 1) * GAP_SIZE;
 
+
+
   return (
-    <div className="flex flex-col items-center gap-4">
-      {/* Mot sélectionné par l'adversaire */}
-      <div className="h-8 flex items-center justify-center">
-        {myOpponentWord ? (
-          <span className="text-brand-blue font-bold text-lg tracking-widest animate-pulse">
-            {myOpponentWord}
-          </span>
+    <div className="flex flex-col items-center gap-6">
+      {/* Mot de l'adversaire */}
+      <div className="h-10 flex items-center justify-center min-w-[200px]">
+        {opponentWord ? (
+          <div className="backdrop-blur-xl bg-blue-500/10 border border-blue-400/30 rounded-xl px-4 py-2 shadow-lg">
+            <span className="text-blue-400 font-bold text-lg tracking-widest animate-pulse">
+              {opponentWord}
+            </span>
+          </div>
         ) : (
           <span className="text-gray-600 text-sm">...</span>
         )}
       </div>
 
       {/* Grille de jeu */}
-      <div className="bg-gray-800 p-3 rounded-xl border border-gray-700 shadow-2xl relative w-fit">
+      <div className="backdrop-blur-xl bg-white/5 p-6 rounded-2xl border border-white/10 shadow-2xl relative">
         {/* Grille de lettres */}
         <Div
-          className="relative"
+          className="relative "
           style={{
             display: 'grid',
             gap: `${GAP_SIZE}px`,
@@ -45,7 +51,7 @@ export default function GameGrid({
             <Div
               key={i}
               style={{ width: `${CELL_SIZE}px`, height: `${CELL_SIZE}px` }}
-              className="bg-gray-700/50 text-gray-300 flex items-center justify-center rounded-md text-sm sm:text-lg font-bold select-none"
+              className="backdrop-blur-xl bg-white/5 border border-white/10 text-white flex items-center justify-center rounded-lg font-bold select-none hover:bg-white/10 hover:border-purple-400/30 transition-all duration-200 cursor-pointer shadow-lg"
             >
               {char}
             </Div>
@@ -55,22 +61,26 @@ export default function GameGrid({
         {/* Canvas superposé */}
         <canvas
           ref={canvasRef}
-          className="absolute top-3 left-3 pointer-events-auto cursor-crosshair "
+          className="absolute top-6 left-6 pointer-events-auto cursor-crosshair "
           width={totalSize}
           height={totalSize}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
+          
         />
+       
       </div>
 
-      {/* Mot sélectionné par moi */}
-      <div className="h-8 flex items-center justify-center">
+      {/* Mon mot */}
+      <div className="h-10 flex items-center justify-center min-w-[200px]">
         {myWord ? (
-          <span className="text-brand-pink font-bold text-lg tracking-widest">
-            {myWord}
-          </span>
+          <div className="backdrop-blur-xl bg-pink-500/10 border border-pink-400/30 rounded-xl px-4 py-2 shadow-lg">
+            <span className="text-pink-400 font-bold text-lg tracking-widest">
+              {myWord}
+            </span>
+          </div>
         ) : (
           <span className="text-gray-600 text-sm">Sélectionnez un mot...</span>
         )}

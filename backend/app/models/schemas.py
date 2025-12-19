@@ -17,6 +17,7 @@ class WordSolution(SQLModel):
     word: str
     start_index: Index
     end_index: Index
+    found_by:str|None = None
 
 
 
@@ -49,5 +50,5 @@ class WordSearchState(GameBaseState):
     # Le frontend a juste besoin de la liste des chaînes pour l'affichage (liste latérale).
     words_to_find: List[str] = Field(default_factory=list) 
     
-    words_found: Dict[str, List[WordSolution]] = Field(default_factory=dict)
+    words_found: List[WordSolution] = Field(default_factory=list)
 
