@@ -13,6 +13,15 @@ services:
     container_name: oneoone_frontend
     env_file:
     - frontend/.env.production
+    - frontend/.env.development
+    depends_on:
+      api_service:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     # Mapper le port 80 du conteneur (Nginx) au port 80 de l'hôte (Web standard)
     ports:
       - "8080:80"
@@ -71,6 +80,11 @@ services:
       POSTGRES_USER: user_db
       POSTGRES_PASSWORD: password
       POSTGRES_DB: oneoone_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user_db -d oneoone_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
