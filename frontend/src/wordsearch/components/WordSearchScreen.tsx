@@ -7,6 +7,7 @@ import GameGrid from './GameGrid';
 import SidePanel from './SidePanel';
 import type { WordSolution, WordSearchData } from '../types';
 import type { GameComponentProps } from '../../Game/types/GameInterface';
+import { Loader2 } from 'lucide-react';
 
 export function WordSearchScreen({ playSound } : GameComponentProps) {
     const game = useGame();
@@ -51,9 +52,7 @@ export function WordSearchScreen({ playSound } : GameComponentProps) {
 
     if (!data || !data.grid_data) {
         return (
-            <div className="flex items-center justify-center h-64">
-                <div className="animate-spin h-12 w-12 border-4 border-brand-pink border-t-transparent rounded-full" />
-            </div>
+            <Loader2></Loader2>
         );
     }
 
@@ -67,6 +66,7 @@ export function WordSearchScreen({ playSound } : GameComponentProps) {
             {/* Panel latéral */}
             <div className="order-2 w-full lg:w-72">
                 <SidePanel
+                    theme={data.theme}
                     wordsToFind={data.words_to_find}
                     wordsFound={allWordsFound}
                     gridSize={data.grid_data.length}

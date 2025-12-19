@@ -1,10 +1,8 @@
-// /frontend/src/game/components/GameOverlay.tsx
-
-import { Trophy, Home, Crown, Frown, Handshake,Flag } from 'lucide-react';
-import {MatchMakingOverlay} from './MatchmakingButton';
+import { useEffect } from 'react';
+import { Crown, Frown, Handshake, Flag, Trophy, Home, Play, Sparkles,Loader2 } from 'lucide-react';
 import { type GameFinishedMessage } from '../types/GameInterface';
 import type { SoundType } from '../types/GameInterface';
-import { useEffect } from 'react';
+import  { type MatchMakingProps,useMatchmaking } from '../hooks/useMatchMaking';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -17,7 +15,6 @@ interface GameOverlayProps {
     gameName: string;
     token: string | null;
     isAuthenticated: boolean;
-    setShowLoginModal: React.Dispatch<React.SetStateAction<boolean>>;
     finishedData:GameFinishedMessage;
     myId:string;
     playSound:((type: SoundType) => void) 
@@ -26,11 +23,7 @@ interface GameOverlayProps {
 
 type GameResult = 'win' | 'lose' | 'draw' | 'abandon';
 
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-
+// Helper function (mock)
 const determineGameResult = (
     finishedData: GameFinishedMessage,
     myPlayerId: string,
@@ -56,43 +49,100 @@ const determineGameResult = (
 };
 
 
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
 
 const resultConfig: Record<GameResult, {
     title: string;
     subtitle: string;
     icon: React.ReactNode;
-    borderColor: string;
-    titleColor: string;
+    gradientFrom: string;
+    gradientTo: string;
+    iconBg: string;
+    shadowColor: string;
 }> = {
     win: {
         title: 'VICTOIRE !',
         subtitle: 'Félicitations, tu as dominé cette partie !',
-        icon: <Crown className="text-brand-yellow" size={48} />,
-        borderColor: 'border-brand-yellow',
-        titleColor: 'text-brand-yellow',
+        icon: <Crown className="text-white" size={48} />,
+        gradientFrom: 'from-yellow-400',
+        gradientTo: 'to-orange-500',
+        iconBg: 'from-yellow-400 to-orange-500',
+        shadowColor: 'shadow-yellow-500/50',
     },
     lose: {
         title: 'DÉFAITE',
         subtitle: 'Pas de chance, tu feras mieux la prochaine fois !',
-        icon: <Frown className="text-red-400" size={48} />,
-        borderColor: 'border-red-500',
-        titleColor: 'text-red-400',
+        icon: <Frown className="text-white" size={48} />,
+        gradientFrom: 'from-red-400',
+        gradientTo: 'to-rose-600',
+        iconBg: 'from-red-500 to-rose-600',
+        shadowColor: 'shadow-red-500/50',
     },
     draw: {
         title: 'ÉGALITÉ !',
         subtitle: 'Match très serré !',
-        icon: <Handshake className="text-brand-blue" size={48} />,
-        borderColor: 'border-brand-blue',
-        titleColor: 'text-brand-blue',
+        icon: <Handshake className="text-white" size={48} />,
+        gradientFrom: 'from-blue-400',
+        gradientTo: 'to-cyan-500',
+        iconBg: 'from-blue-500 to-cyan-500',
+        shadowColor: 'shadow-blue-500/50',
     },
-   abandon: {
+    abandon: {
         title: 'VICTOIRE PAR ABANDON',
         subtitle: 'Ton adversaire a quitté la partie.',
-        icon: <Flag className="text-orange-400" size={48} />,
-        borderColor: 'border-orange-500',
-        titleColor: 'text-orange-400',
+        icon: <Flag className="text-white" size={48} />,
+        gradientFrom: 'from-orange-400',
+        gradientTo: 'to-amber-500',
+        iconBg: 'from-orange-500 to-amber-600',
+        shadowColor: 'shadow-orange-500/50',
     },
 };
+
+// =============================================================================
+// MOCK COMPONENTS
+// =============================================================================
+
+function MatchMakingOverlay({
+    token,
+    gameName,
+    isAuthenticated,
+    onAuthRequired,
+}: MatchMakingProps) {
+
+    const {
+            isSearching,
+            isLoading,
+            startSearch,
+            cancelSearch,
+        } = useMatchmaking({
+            token,
+            gameName,
+            isAuthenticated,
+            onAuthRequired,
+        });
+    return (
+
+
+        <button 
+        onClick={isSearching ? cancelSearch : startSearch}
+        disabled={isLoading}
+        className="w-full py-3.5 bg-linear-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
+        {isLoading || isSearching ? (
+                <Loader2 size={20} className="animate-spin" />
+            )  : (<Play size={20} />)}
+
+        {
+            isSearching ? 
+            <>Annuler</>
+                : 
+            <>Rejouer </>
+
+        }
+        </button>
+    );
+}
 
 // =============================================================================
 // COMPONENT
@@ -106,99 +156,170 @@ export default function GameOverlay({
     gameName,
     token,
     isAuthenticated,
-    setShowLoginModal,
     finishedData,
     playSound,
     myId,
     onLobby,
-}: GameOverlayProps) {
+}: GameOverlayProps)  {
     
-    const result = determineGameResult(finishedData, myId);
+    const result = determineGameResult(finishedData, myId || '');
     const config = resultConfig[result];
 
-
-    useEffect(() =>{
-
-        console.log(result)
-
-        if(result === 'win' || result === 'abandon') playSound('win')
-    
-    },[playSound,result])
+    useEffect(() => {
+        console.log(result);
+        if (result === 'win' || result === 'abandon') playSound('win');
+    }, [playSound, result]);
 
     return (
-        <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div
-                className={`bg-gray-800 border-2 ${config.borderColor} rounded-2xl p-8 max-w-1/3 w-full min-w-md text-center shadow-2xl animate-bounce-in`}
-            >
-                {/* Icône */}
-                <div className="flex justify-center mb-4">
-                    {config.icon}
+        <div className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4">
+            {/* Particles effect (optional) */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {result === 'win' && (
+                    <>
+                        <Sparkles className="absolute top-1/4 left-1/4 w-8 h-8 text-yellow-400 animate-pulse" />
+                        <Sparkles className="absolute top-1/3 right-1/4 w-6 h-6 text-yellow-300 animate-pulse delay-300" />
+                        <Sparkles className="absolute bottom-1/3 left-1/3 w-7 h-7 text-orange-400 animate-pulse delay-500" />
+                    </>
+                )}
+            </div>
+
+            {/* Modal */}
+            <div className="relative backdrop-blur-xl bg-white/10 border border-white/20 rounded-3xl p-8 max-w-lg w-full shadow-2xl animate-scale-in">
+                {/* Icon with glow */}
+                <div className="flex justify-center mb-6">
+                    <div className="relative">
+                        {/* Glow effect */}
+                        <div className={`absolute inset-0 rounded-full bg-linear-to-br ${config.iconBg} blur-2xl opacity-60 animate-pulse`} />
+                        {/* Icon container */}
+                        <div className={`relative w-24 h-24 bg-linear-to-br ${config.iconBg} rounded-full flex items-center justify-center shadow-2xl ${config.shadowColor}`}>
+                            {config.icon}
+                        </div>
+                    </div>
                 </div>
 
-                {/* Titre */}
-                <h2 className={`text-4xl font-black ${config.titleColor} mb-2`}>
+                {/* Title */}
+                <h2 className={`text-4xl font-black text-center mb-2 bg-linear-to-r ${config.gradientFrom} ${config.gradientTo} bg-clip-text text-transparent`}>
                     {config.title}
                 </h2>
 
-                {/* Sous-titre */}
-                <p className="text-gray-300 mb-6">
+                {/* Subtitle */}
+                <p className="text-gray-300 text-center mb-8">
                     {config.subtitle}
                 </p>
 
                 {/* Scores */}
-                <div className="flex justify-center gap-8 mb-8">
-                    {/* Mon score */}
-                    <div className="text-center">
-                        <p className="text-brand-pink font-bold text-sm uppercase tracking-wider mb-1">
-                            {myName}
-                        </p>
-                        <div className="flex items-center justify-center gap-2">
-                            {result === 'win' && <Trophy className="text-brand-yellow" size={20} />}
-                            <p className={`text-4xl font-bold ${result === 'win' ? 'text-brand-yellow' : 'text-white'}`}>
-                                {myScore}
-                            </p>
-                        </div>
-                    </div>
+                <div className="mb-8">
+                    <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl p-6 shadow-lg">
+                        <div className="flex justify-center items-center gap-8">
+                            {/* My score */}
+                            <div className="flex-1 text-center">
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                    <div className="w-10 h-10 bg-linear-to-br from-pink-500 to-purple-600 rounded-full flex items-center justify-center text-xl shadow-lg shadow-pink-500/50">
+                                        😊
+                                    </div>
+                                    {result === 'win' && (
+                                        <Trophy className="text-yellow-400 animate-bounce" size={20} />
+                                    )}
+                                </div>
+                                <p className="text-pink-400 font-bold text-sm uppercase tracking-wider mb-2">
+                                    {myName}
+                                </p>
+                                <div className={`text-5xl font-black ${result === 'win' ? 'bg-linear-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent' : 'text-white'}`}>
+                                    {myScore}
+                                </div>
+                            </div>
 
-                    {/* Séparateur */}
-                    <div className="flex items-center">
-                        <span className="text-gray-500 text-2xl font-bold">-</span>
-                    </div>
+                            {/* VS Divider */}
+                            <div className="relative">
+                                <div className="w-16 h-16 bg-linear-to-br from-purple-600 to-pink-600 rounded-full flex items-center justify-center shadow-xl shadow-purple-500/50">
+                                    <span className="text-xl font-black text-white">VS</span>
+                                </div>
+                                <div className="absolute inset-0 rounded-full bg-linear-to-br from-purple-600 to-pink-600 animate-ping opacity-20" />
+                            </div>
 
-                    {/* Score adversaire */}
-                    <div className="text-center">
-                        <p className="text-brand-blue font-bold text-sm uppercase tracking-wider mb-1">
-                            {opponentName}
-                        </p>
-                        <div className="flex items-center justify-center gap-2">
-                            {result === 'lose' && <Trophy className="text-brand-yellow" size={20} />}
-                            <p className={`text-4xl font-bold ${result === 'lose' ? 'text-brand-yellow' : 'text-white'}`}>
-                                {opponentScore}
-                            </p>
+                            {/* Opponent score */}
+                            <div className="flex-1 text-center">
+                                <div className="flex items-center justify-center gap-2 mb-2">
+                                    {result === 'lose' && (
+                                        <Trophy className="text-yellow-400 animate-bounce" size={20} />
+                                    )}
+                                    <div className="w-10 h-10 bg-linear-to-br from-blue-500 to-cyan-600 rounded-full flex items-center justify-center text-xl shadow-lg shadow-blue-500/50">
+                                        🎮
+                                    </div>
+                                </div>
+                                <p className="text-blue-400 font-bold text-sm uppercase tracking-wider mb-2">
+                                    {opponentName}
+                                </p>
+                                <div className={`text-5xl font-black ${result === 'lose' ? 'bg-linear-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent' : 'text-white'}`}>
+                                    {opponentScore}
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Boutons */}
-                <div className="flex flex-col items-center gap-3">
-                    {/* 🎯 MatchmakingButton pour rejouer */}
-                    <MatchMakingOverlay
+                {/* Stats (optional) */}
+                <div className="grid grid-cols-3 gap-3 mb-8">
+                    <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                        <p className="text-xs text-gray-400 mb-1">Points gagnés</p>
+                        <p className="text-lg font-bold text-green-400">+125 XP</p>
+                    </div>
+                    <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                        <p className="text-xs text-gray-400 mb-1">Durée</p>
+                        <p className="text-lg font-bold text-purple-400">2:34</p>
+                    </div>
+                    <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-3 text-center">
+                        <p className="text-xs text-gray-400 mb-1">Précision</p>
+                        <p className="text-lg font-bold text-blue-400">94%</p>
+                    </div>
+                </div>
 
+                {/* Buttons */}
+                <div className="flex flex-col gap-3">
+                    {/* Rematch button */}
+                    <MatchMakingOverlay
                         token={token}
                         gameName={gameName}
                         isAuthenticated={isAuthenticated}
-                        onAuthRequired={() => setShowLoginModal(true)}
                     />
 
+                    {/* Lobby button */}
                     <button
                         onClick={onLobby}
-                        className="w-full py-3 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-600 transition flex items-center justify-center gap-2"
+                        className="w-full py-3.5 bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-bold rounded-xl transition-all duration-200 flex items-center justify-center gap-2"
                     >
                         <Home size={20} />
                         Retour au Lobby
                     </button>
                 </div>
             </div>
+
+            {/* CSS Animations */}
+            <style>{`
+                @keyframes scale-in {
+                    from {
+                        opacity: 0;
+                        transform: scale(0.9);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: scale(1);
+                    }
+                }
+                
+                .animate-scale-in {
+                    animation: scale-in 0.3s ease-out;
+                }
+                
+                .delay-300 {
+                    animation-delay: 0.3s;
+                }
+                
+                .delay-500 {
+                    animation-delay: 0.5s;
+                }
+            `}</style>
         </div>
     );
 }
+

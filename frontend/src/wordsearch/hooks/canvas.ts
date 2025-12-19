@@ -17,7 +17,7 @@ export interface UseCanvasDrawingReturn {
     handleMouseUp: (e: React.MouseEvent<HTMLCanvasElement>) => void;
     isDrawing: boolean;
     myWord: string;
-    myOpponentWord: string;
+    opponentWord: string;
 }
 
 // =============================================================================
@@ -114,7 +114,7 @@ export const useCanvasDrawing = (
 
     const [opponentPosition, setOpponentPosition] = useState<Position | null>(null);
     const [opponentColor, setOpponentColor] = useState<string | null>(null);
-    const [myOpponentWord, setMyOpponentWord] = useState('');
+    const [opponentWord, setOpponentWord] = useState('');
 
     // ─────────────────────────────────────────────────────────────────────────
     // MEMOIZED VALUES
@@ -290,7 +290,7 @@ export const useCanvasDrawing = (
 
                             if (gridData.length > 0) {
                                 const { word } = calculateWord(data.position);
-                                setMyOpponentWord(word ?? '');
+                                setOpponentWord(word ?? '');
                             }
                         }
                         break;
@@ -326,7 +326,7 @@ export const useCanvasDrawing = (
                     case 'reset':
                         setOpponentPosition(null);
                         setOpponentColor(null);
-                        setMyOpponentWord('');
+                        setOpponentWord('');
                         
                         
                         break;
@@ -452,7 +452,7 @@ export const useCanvasDrawing = (
         handleMouseUp: handleMouseLeave,
         isDrawing,
         myWord,
-        myOpponentWord,
+        opponentWord,
     };
 };
 

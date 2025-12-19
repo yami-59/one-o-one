@@ -44,7 +44,7 @@ export interface CanvaDrawingProps {
     handleMouseUp: (e: React.MouseEvent<HTMLCanvasElement>) => void;
     isDrawing: boolean;
     myWord: string;
-    myOpponentWord: string;
+    opponentWord: string;
 }
 
 export interface WordSearchTableProps extends CanvaDrawingProps {
