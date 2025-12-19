@@ -1,7 +1,7 @@
 // /frontend/src/components/Login.tsx
 
 import { useState } from 'react';
-import { X, User, Mail, Lock, Loader2 } from 'lucide-react';
+import { X, User, Mail, Lock, Loader2, Sparkles, UserPlus, LogIn } from 'lucide-react';
 import { useAuth } from '../auth/AuthContext';
 
 // =============================================================================
@@ -17,17 +17,16 @@ interface LoginProps {
     isModal?: boolean;
 }
 
-
-async function login(email:string,password:string){console.log(email,password)}
+async function login(email: string, password: string) {
+    console.log(email, password);
+}
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
 export default function Login({ onSuccess, onClose, isModal = false }: LoginProps) {
-    const { loginAsGuest} = useAuth();
-
-
+    const { loginAsGuest } = useAuth();
 
     // ─────────────────────────────────────────────────────────────────────────
     // STATE
@@ -55,7 +54,7 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
             onSuccess?.();
         } catch (err) {
             setError('Erreur lors de la connexion. Réessayez.');
-            console.log(err)
+            console.log(err);
         } finally {
             setIsLoading(false);
         }
@@ -71,8 +70,7 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
             onSuccess?.();
         } catch (err) {
             setError('Email ou mot de passe incorrect.');
-            console.log(err)
-
+            console.log(err);
         } finally {
             setIsLoading(false);
         }
@@ -89,11 +87,47 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
             onSuccess?.();
         } catch (err) {
             setError("Erreur lors de l'inscription.");
-            console.log(err)
-
+            console.log(err);
         } finally {
             setIsLoading(false);
         }
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // RENDER HELPERS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    const renderHeader = () => {
+        const titles = {
+            choice: 'Bienvenue !',
+            login: 'Connexion',
+            register: 'Inscription',
+        };
+
+        const subtitles = {
+            choice: 'Rejoins la compétition',
+            login: 'Content de te revoir',
+            register: 'Créer ton compte',
+        };
+
+        return (
+            <div className="text-center mb-8">
+                <div className="flex justify-center mb-4">
+                    <div className="relative">
+                        {/* Glow effect */}
+                        <div className="absolute inset-0 bg-linear-to-br from-purple-500 to-pink-600 rounded-full blur-2xl opacity-40 animate-pulse" />
+                        {/* Icon */}
+                        <div className="relative w-20 h-20 bg-linear-to-br from-purple-500 to-pink-600 rounded-full flex items-center justify-center shadow-2xl shadow-purple-500/50">
+                            <Sparkles className="w-10 h-10 text-white" />
+                        </div>
+                    </div>
+                </div>
+                <h2 className="text-3xl font-black bg-linear-to-r from-purple-400 via-pink-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                    {titles[mode]}
+                </h2>
+                <p className="text-gray-400 text-sm">{subtitles[mode]}</p>
+            </div>
+        );
     };
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -101,29 +135,24 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
     // ─────────────────────────────────────────────────────────────────────────
 
     return (
-        <div className="bg-gray-800 border border-gray-700 rounded-2xl p-6 shadow-2xl w-full max-w-md">
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold text-white">
-                    {mode === 'choice' && 'Connexion'}
-                    {mode === 'login' && 'Se connecter'}
-                    {mode === 'register' && "S'inscrire"}
-                </h2>
+        <div className="relative backdrop-blur-2xl bg-white/10 border border-white/20 rounded-3xl p-8 shadow-2xl w-full max-w-md">
+            {/* Close button */}
+            {isModal && onClose && (
+                <div
+                    onClick={onClose}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors p-2 rounded-xl hover:bg-white/10"
+                >
+                    <X size={24} />
+                </div>
+            )}
 
-                {isModal && onClose && (
-                    <div
-                        onClick={onClose}
-                        className="text-gray-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-gray-700"
-                    >
-                        <X size={24} />
-                    </div>
-                )}
-            </div>
+            {/* Header */}
+            {renderHeader()}
 
             {/* Error message */}
             {error && (
-                <div className="bg-red-500/10 border border-red-500/50 text-red-400 px-4 py-3 rounded-lg mb-4">
-                    {error}
+                <div className="mb-6 backdrop-blur-xl bg-red-500/20 border border-red-500/50 text-red-300 px-4 py-3 rounded-xl shadow-lg shadow-red-500/20 animate-shake">
+                    <p className="text-sm font-medium">{error}</p>
                 </div>
             )}
 
@@ -136,22 +165,29 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
                     <button
                         onClick={handleGuestLogin}
                         disabled={isLoading}
-                        className="w-full bg-brand-yellow text-gray-900 hover:bg-yellow-400 font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="group w-full bg-linear-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-yellow-500/30 hover:shadow-yellow-500/50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     >
                         {isLoading ? (
-                            <Loader2 size={20} className="animate-spin" />
+                            <Loader2 size={22} className="animate-spin" />
                         ) : (
-                            <User size={20} />
+                            <>
+                                <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+                                    <User size={18} />
+                                </div>
+                                <span>Jouer en tant qu'invité</span>
+                            </>
                         )}
-                        Jouer en tant qu'invité
                     </button>
 
-                    <div className="relative">
+                    {/* Divider */}
+                    <div className="relative py-2">
                         <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-600" />
+                            <div className="w-full border-t border-white/20" />
                         </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-gray-800 text-gray-400">ou</span>
+                        <div className="relative flex justify-center">
+                            <span className="px-4 backdrop-blur-xl bg-white/5 text-gray-400 text-sm font-medium rounded-full border border-white/10">
+                                ou
+                            </span>
                         </div>
                     </div>
 
@@ -159,22 +195,26 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
                     <button
                         disabled
                         onClick={() => setMode('login')}
-                        className="w-full bg-gray-700 hover:bg-gray-600 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+                        className="group w-full backdrop-blur-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-bold py-4 px-6 rounded-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     >
-                        <Mail size={20} />
-                        Se connecter avec un compte
+                        <div className="w-8 h-8 bg-linear-to-br from-blue-500 to-cyan-500 rounded-full flex items-center justify-center shadow-lg shadow-blue-500/50">
+                            <Mail size={18} />
+                        </div>
+                        <span>Se connecter avec un compte</span>
                     </button>
 
                     {/* Lien inscription */}
-                    <p className="text-center text-gray-400 text-sm">
-                        Pas de compte ?{' '}
-                        <button
-                            onClick={() => setMode('register')}
-                            className="text-brand-pink hover:underline font-medium"
-                        >
-                            S'inscrire
-                        </button>
-                    </p>
+                    <div className="pt-4 text-center">
+                        <p className="text-gray-400 text-sm">
+                            Pas encore de compte ?{' '}
+                            <button
+                                onClick={() => setMode('register')}
+                                className="text-pink-400 hover:text-pink-300 font-bold transition-colors hover:underline"
+                            >
+                                S'inscrire gratuitement
+                            </button>
+                        </p>
+                    </div>
                 </div>
             )}
 
@@ -182,65 +222,70 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
                 Mode: Login (Formulaire de connexion)
             ───────────────────────────────────────────────────────────────── */}
             {mode === 'login' && (
-                <form onSubmit={handleLogin} className="space-y-4">
+                <form onSubmit={handleLogin} className="space-y-5">
+                    {/* Email */}
                     <div>
-                        <label className="block text-gray-300 text-sm font-medium mb-2">
+                        <label className="block text-white text-sm font-bold mb-2">
                             Email
                         </label>
                         <div className="relative">
-                            <Mail
-                                size={18}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-                            />
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-linear-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30">
+                                <Mail size={18} className="text-white" />
+                            </div>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="votre@email.com"
                                 required
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-brand-pink transition-colors"
+                                className="w-full backdrop-blur-xl bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-xl py-4 pl-16 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                             />
                         </div>
                     </div>
 
+                    {/* Password */}
                     <div>
-                        <label className="block text-gray-300 text-sm font-medium mb-2">
+                        <label className="block text-white text-sm font-bold mb-2">
                             Mot de passe
                         </label>
                         <div className="relative">
-                            <Lock
-                                size={18}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-                            />
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-linear-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/30">
+                                <Lock size={18} className="text-white" />
+                            </div>
                             <input
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
                                 required
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-brand-pink transition-colors"
+                                className="w-full backdrop-blur-xl bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-xl py-4 pl-16 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                             />
                         </div>
                     </div>
 
+                    {/* Submit button */}
                     <button
                         type="submit"
                         disabled={isLoading}
-                        className="w-full bg-brand-pink hover:bg-brand-pink/80 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full bg-linear-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     >
                         {isLoading ? (
-                            <Loader2 size={20} className="animate-spin" />
+                            <Loader2 size={22} className="animate-spin" />
                         ) : (
-                            'Se connecter'
+                            <>
+                                <LogIn size={20} />
+                                <span>Se connecter</span>
+                            </>
                         )}
                     </button>
 
+                    {/* Back button */}
                     <button
                         type="button"
                         onClick={() => setMode('choice')}
-                        className="w-full text-gray-400 hover:text-white text-sm transition-colors"
+                        className="w-full text-gray-400 hover:text-white text-sm font-medium transition-colors py-2"
                     >
-                        ← Retour
+                        ← Retour aux options
                     </button>
                 </form>
             )}
@@ -249,56 +294,56 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
                 Mode: Register (Formulaire d'inscription)
             ───────────────────────────────────────────────────────────────── */}
             {mode === 'register' && (
-                <form onSubmit={handleRegister} className="space-y-4">
+                <form onSubmit={handleRegister} className="space-y-5">
+                    {/* Username */}
                     <div>
-                        <label className="block text-gray-300 text-sm font-medium mb-2">
+                        <label className="block text-white text-sm font-bold mb-2">
                             Nom d'utilisateur
                         </label>
                         <div className="relative">
-                            <User
-                                size={18}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-                            />
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-linear-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg shadow-pink-500/30">
+                                <User size={18} className="text-white" />
+                            </div>
                             <input
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
                                 placeholder="MonPseudo"
                                 required
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-brand-pink transition-colors"
+                                className="w-full backdrop-blur-xl bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-xl py-4 pl-16 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                             />
                         </div>
                     </div>
 
+                    {/* Email */}
                     <div>
-                        <label className="block text-gray-300 text-sm font-medium mb-2">
+                        <label className="block text-white text-sm font-bold mb-2">
                             Email
                         </label>
                         <div className="relative">
-                            <Mail
-                                size={18}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-                            />
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-linear-to-br from-blue-500 to-cyan-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/30">
+                                <Mail size={18} className="text-white" />
+                            </div>
                             <input
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="votre@email.com"
                                 required
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-brand-pink transition-colors"
+                                className="w-full backdrop-blur-xl bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-xl py-4 pl-16 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                             />
                         </div>
                     </div>
 
+                    {/* Password */}
                     <div>
-                        <label className="block text-gray-300 text-sm font-medium mb-2">
+                        <label className="block text-white text-sm font-bold mb-2">
                             Mot de passe
                         </label>
                         <div className="relative">
-                            <Lock
-                                size={18}
-                                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
-                            />
+                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-linear-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/30">
+                                <Lock size={18} className="text-white" />
+                            </div>
                             <input
                                 type="password"
                                 value={password}
@@ -306,33 +351,53 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
                                 placeholder="••••••••"
                                 required
                                 minLength={6}
-                                className="w-full bg-gray-700 border border-gray-600 rounded-lg py-3 pl-10 pr-4 text-white placeholder-gray-500 focus:outline-none focus:border-brand-pink transition-colors"
+                                className="w-full backdrop-blur-xl bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-xl py-4 pl-16 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                             />
                         </div>
+                        <p className="text-xs text-gray-400 mt-2">
+                            Minimum 6 caractères
+                        </p>
                     </div>
 
+                    {/* Submit button */}
                     <button
                         disabled
                         type="submit"
-                        // disabled={isLoading}
-                        className="w-full bg-brand-pink hover:bg-brand-pink/80 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                        className="w-full bg-linear-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     >
                         {isLoading ? (
-                            <Loader2 size={20} className="animate-spin" />
+                            <Loader2 size={22} className="animate-spin" />
                         ) : (
-                            "S'inscrire"
+                            <>
+                                <UserPlus size={20} />
+                                <span>Créer mon compte</span>
+                            </>
                         )}
                     </button>
 
+                    {/* Back button */}
                     <button
                         type="button"
                         onClick={() => setMode('choice')}
-                        className="w-full text-gray-400 hover:text-white text-sm transition-colors"
+                        className="w-full text-gray-400 hover:text-white text-sm font-medium transition-colors py-2"
                     >
-                        ← Retour
+                        ← Retour aux options
                     </button>
                 </form>
             )}
+
+            {/* CSS Animations */}
+            <style>{`
+                @keyframes shake {
+                    0%, 100% { transform: translateX(0); }
+                    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+                    20%, 40%, 60%, 80% { transform: translateX(5px); }
+                }
+                
+                .animate-shake {
+                    animation: shake 0.5s ease-in-out;
+                }
+            `}</style>
         </div>
     );
 }

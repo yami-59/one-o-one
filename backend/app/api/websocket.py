@@ -271,6 +271,8 @@ async def websocket_endpoint(
     try:
         while True:
 
+            print(f"[{player_id}] dans la boucle ")
+
             
             
             data = await websocket.receive_json()

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { CELL_SIZE, GAP_SIZE, LINE_THICKNESS } from '../constants';
-import { getGridIndex, getRandomRainbowColor, construct_word } from '../lib';
+import { getGridIndex, construct_word } from '../lib';
 import { type Position, type WordSolution, type GridIndexes, type WordSearchData } from '../types';
 import { GameMessages } from '../constants';
 import type { SoundType } from '../../Game/types/GameInterface';
@@ -17,7 +17,7 @@ export interface UseCanvasDrawingReturn {
     handleMouseUp: (e: React.MouseEvent<HTMLCanvasElement>) => void;
     isDrawing: boolean;
     myWord: string;
-    myOpponentWord: string;
+    opponentWord: string;
 }
 
 // =============================================================================
@@ -27,6 +27,13 @@ export interface UseCanvasDrawingReturn {
 const THROTTLE_MS = 50;
 const MIN_WORD_LENGTH = 2;
 
+// 🎯 Couleurs fixes pour les joueurs
+const MY_COLOR = 'rgba(59, 130, 246, 0.6)';        // Bleu
+const OPPONENT_COLOR = 'rgba(236, 72, 153, 0.6)';  // Rose/Rouge
+
+// Couleurs pour les mots trouvés (permanents sur la grille)
+const MY_FOUND_COLOR = 'rgba(59, 130, 246, 0.4)';        // Bleu plus léger
+const OPPONENT_FOUND_COLOR = 'rgba(236, 72, 153, 0.4)';  // Rose plus léger
 // =============================================================================
 // HELPERS
 // =============================================================================
@@ -46,14 +53,11 @@ const solutionToCanvasPosition = (solution: WordSolution): Position => {
     };
 };
 
-const getPlayerColor = (playerIndex: number): string => {
-    const colors = [
-        'rgba(34, 197, 94, 0.5)',
-        'rgba(59, 130, 246, 0.5)',
-        'rgba(249, 115, 22, 0.5)',
-        'rgba(236, 72, 153, 0.5)',
-    ];
-    return colors[playerIndex % colors.length];
+const getPlayerColor = (foundById: string|undefined, myPlayerId?: string): string => {
+    if (foundById === myPlayerId) {
+        return MY_FOUND_COLOR;
+    }
+    return OPPONENT_FOUND_COLOR;
 };
 
 // =============================================================================
@@ -86,47 +90,41 @@ export const useCanvasDrawing = (
 
 
     // 🎯 DEBUG CRITIQUE: Log à chaque appel du hook
-    console.log(`🎨 [Canvas ${playerId?.slice(-8)}] Hook appelé avec ws:`, {
-        wsParam: ws ? `exists, readyState=${ws.readyState}` : 'null',
-        wsRefCurrent: wsRef.current ? `exists, readyState=${wsRef.current.readyState}` : 'null',
-        sameObject: ws === wsRef.current,
-    });
+    // console.log(`🎨 [Canvas ${playerId?.slice(-8)}] Hook appelé avec ws:`, {
+    //     wsParam: ws ? `exists, readyState=${ws.readyState}` : 'null',
+    //     wsRefCurrent: wsRef.current ? `exists, readyState=${wsRef.current.readyState}` : 'null',
+    //     sameObject: ws === wsRef.current,
+    // });
 
-    useEffect(() => {
-        console.log(`🔄 [Canvas ${playerId?.slice(-8)}] useEffect ws - avant:`, wsRef.current ? 'exists' : 'null');
-        wsRef.current = ws;
-        console.log(`🔄 [Canvas ${playerId?.slice(-8)}] useEffect ws - après:`, wsRef.current ? 'exists' : 'null');
-        
-        if (ws) {
-            console.log(`✅ [Canvas ${playerId?.slice(-8)}] WebSocket assigné, readyState: ${ws.readyState}`);
-        }
-    }, [ws, playerId]);
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // STATE
     // ─────────────────────────────────────────────────────────────────────────
     
     const [isDrawing, setIsDrawing] = useState(false);
-    const [myColor, setMyColor] = useState(() => getRandomRainbowColor());
     const [myPosition, setMyPosition] = useState<Position | null>(null);
     const [myWord, setMyWord] = useState('');
     const [currentIndexes, setCurrentIndexes] = useState<GridIndexes | null>(null);
 
     const [opponentPosition, setOpponentPosition] = useState<Position | null>(null);
-    const [opponentColor, setOpponentColor] = useState<string | null>(null);
-    const [myOpponentWord, setMyOpponentWord] = useState('');
+    const [opponentWord, setOpponentWord] = useState('');
 
     // ─────────────────────────────────────────────────────────────────────────
     // MEMOIZED VALUES
     // ─────────────────────────────────────────────────────────────────────────
     
     const foundWordsPositions = useMemo(() => {
-        return solutionsFound.map((solution, index) => ({
+        
+
+        return solutionsFound.map((solution) => (
+            {
             ...solution,
             canvasPosition: solutionToCanvasPosition(solution),
-            color: getPlayerColor(index % 2),
+            // 🎯 Utilise l'ID du joueur qui a trouvé le mot
+            color: getPlayerColor(solution?.found_by, playerId),
         }));
-    }, [solutionsFound]);
+    }, [solutionsFound, playerId]);
 
     const foundWordsSet = useMemo(() => {
         return new Set(solutionsFound.map((s) => s.word.toUpperCase()));
@@ -161,18 +159,18 @@ export const useCanvasDrawing = (
 
         const currentWs = wsRef.current;
         if (!currentWs) {
-            console.log(`❌ [Canvas ${playerId?.slice(-8)}] wsRef.current est NULL`);
+            // console.log(`❌ [Canvas ${playerId?.slice(-8)}] wsRef.current est NULL`);
             return;
         }
         
         if (currentWs.readyState !== WebSocket.OPEN) {
-            console.log(`❌ [Canvas ${playerId?.slice(-8)}] readyState=${currentWs.readyState} (pas OPEN=1)`);
+            // console.log(`❌ [Canvas ${playerId?.slice(-8)}] readyState=${currentWs.readyState} (pas OPEN=1)`);
             return;
         }
 
         try {
             currentWs.send(JSON.stringify(message));
-            console.log(`✅ [Canvas ${playerId?.slice(-8)}] send() exécuté`);
+            // console.log(`✅ [Canvas ${playerId?.slice(-8)}] send() exécuté`);
         } catch (error) {
             console.error(`❌ [Canvas ${playerId?.slice(-8)}] Erreur send():`, error);
         }
@@ -234,6 +232,10 @@ export const useCanvasDrawing = (
     // RENDER EFFECT
     // ─────────────────────────────────────────────────────────────────────────
     
+    // ─────────────────────────────────────────────────────────────────────────
+    // RENDER EFFECT
+    // ─────────────────────────────────────────────────────────────────────────
+
     useEffect(() => {
         const ctx = getContext();
         if (!ctx) return;
@@ -243,16 +245,19 @@ export const useCanvasDrawing = (
         rafId.current = requestAnimationFrame(() => {
             ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
+            // Mots déjà trouvés
             foundWordsPositions.forEach(({ canvasPosition, color }) => {
                 drawLine(ctx, canvasPosition, color, LINE_THICKNESS * 0.85);
             });
 
-            if (opponentPosition && opponentColor) {
-                drawLine(ctx, opponentPosition, opponentColor, LINE_THICKNESS * 0.7, true);
+            // 🎯 Sélection adversaire en ROSE
+            if (opponentPosition) {
+                drawLine(ctx, opponentPosition, OPPONENT_COLOR, LINE_THICKNESS * 0.7, true);
             }
 
+            // 🎯 Ma sélection en BLEU
             if (isDrawing && myPosition) {
-                drawLine(ctx, myPosition, myColor, LINE_THICKNESS);
+                drawLine(ctx, myPosition, MY_COLOR, LINE_THICKNESS);
             }
         });
 
@@ -262,9 +267,7 @@ export const useCanvasDrawing = (
     }, [
         isDrawing,
         myPosition,
-        myColor,
         opponentPosition,
-        opponentColor,
         foundWordsPositions,
         getContext,
         drawLine,
@@ -286,11 +289,10 @@ export const useCanvasDrawing = (
                     case GameMessages.SELECTION_UPDATE:
                         if (data.position) {
                             setOpponentPosition(data.position);
-                            setOpponentColor(data.color || 'rgba(239, 68, 68, 0.5)');
 
                             if (gridData.length > 0) {
                                 const { word } = calculateWord(data.position);
-                                setMyOpponentWord(word ?? '');
+                                setOpponentWord(word ?? '');
                             }
                         }
                         break;
@@ -302,9 +304,9 @@ export const useCanvasDrawing = (
                             if (!prev) return null;
 
                             const newSolution: WordSolution = data.new_solution;
-                            const updatedWordsFound = { ...prev.words_found };
-                            const playerWords = updatedWordsFound[data.found_by] || [];
-                            updatedWordsFound[data.found_by] = [...playerWords, newSolution];
+                            
+                            // 🎯 FIX: words_found est une liste, pas un dictionnaire
+                            const updatedWordsFound = [...prev.words_found, newSolution];
 
                             const updatedScores = { ...prev.realtime_score };
                             if (data.new_score !== undefined) {
@@ -318,15 +320,14 @@ export const useCanvasDrawing = (
                             };
                         });
 
-                        if(playSound) playSound('success')
+                        if (playSound) playSound('success');
                         break;
 
                         
                     case 'selection_reset':
                     case 'reset':
                         setOpponentPosition(null);
-                        setOpponentColor(null);
-                        setMyOpponentWord('');
+                        setOpponentWord('');
                         
                         
                         break;
@@ -369,10 +370,9 @@ export const useCanvasDrawing = (
             sendImmediate({
                 type: GameMessages.SELECTION_UPDATE,
                 position,
-                color: myColor,
             });
         },
-        [gridData, myColor, calculateWord, sendImmediate, CANVAS_SIZE]
+        [gridData, calculateWord, sendImmediate, CANVAS_SIZE]
     );
 
     const handleMouseMove = useCallback(
@@ -399,10 +399,9 @@ export const useCanvasDrawing = (
             sendThrottled({
                 type: GameMessages.SELECTION_UPDATE,
                 position: newPosition,
-                color: myColor,
             });
         },
-        [isDrawing, myPosition, gridData, myColor, calculateWord, sendThrottled, CANVAS_SIZE]
+        [isDrawing, myPosition, gridData, calculateWord, sendThrottled, CANVAS_SIZE]
     );
 
     const handleMouseUp = useCallback(() => {
@@ -420,7 +419,7 @@ export const useCanvasDrawing = (
                         end_index: currentIndexes.end_index,
                     },
                 });
-                console.log(`📤 Word submitted: "${myWord}"`);
+                // console.log(`📤 Word submitted: "${myWord}"`);
             } else {
                 console.log(`⚠️ Word already found: "${myWord}"`);
             }
@@ -430,7 +429,6 @@ export const useCanvasDrawing = (
         setMyPosition(null);
         setCurrentIndexes(null);
         setMyWord('');
-        setMyColor(getRandomRainbowColor());
 
         sendImmediate({ type: GameMessages.SELECTION_RESET });
     }, [isDrawing, myWord, currentIndexes, foundWordsSet, sendImmediate]);
@@ -452,7 +450,7 @@ export const useCanvasDrawing = (
         handleMouseUp: handleMouseLeave,
         isDrawing,
         myWord,
-        myOpponentWord,
+        opponentWord,
     };
 };
 

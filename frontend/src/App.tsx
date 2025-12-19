@@ -1,9 +1,8 @@
 // /frontend/src/App.tsx
 
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-// import Exemple from './pages/exemple.tsx';
 import GamePage from './pages/GamePage.tsx';
-import LobbyPage from './pages/LobbyPage';
+import LobbyPage from './pages/LobbyPage.tsx';
 function App() {
     return (
         // 1. BrowserRouter : Active le routage pour l'application
