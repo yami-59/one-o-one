@@ -8,6 +8,7 @@ export interface Point {
 
 export interface WordSolution extends GridIndexes{
     word:string
+    found_by:string;
 }
 
 // Interface pour les indices de grille
@@ -68,5 +69,5 @@ export interface WordSearchData extends GameBaseData {
   words_to_find: string[];
 
   // Mots trouvés par joueur
-  words_found: Record<string, WordSolution[]>; 
+  words_found:  WordSolution[]; 
 }

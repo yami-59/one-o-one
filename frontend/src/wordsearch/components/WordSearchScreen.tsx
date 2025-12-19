@@ -1,6 +1,6 @@
 // /frontend/src/wordsearch/components/WordSearchScreen.tsx
 
-import { useMemo , useEffect} from 'react';
+import { useMemo } from 'react';
 import { useGame } from '../../Game/context/GameContext';
 import { useCanvasDrawing } from '../hooks/canvas';
 import GameGrid from './GameGrid';
@@ -13,12 +13,6 @@ export function WordSearchScreen({ playSound } : GameComponentProps) {
     const game = useGame();
 
 
-    // 🎯 DEBUG: Log quand game.ws change
-    useEffect(() => {
-        console.log(`🔄 [WordSearchScreen] game.ws changé:`, 
-            game.ws ? `readyState=${game.ws.readyState}` : 'null'
-        );
-    }, [game.ws]);
     
     // Cast des données spécifiques au jeu
     const data = game.gameData as WordSearchData | null;
@@ -29,7 +23,7 @@ export function WordSearchScreen({ playSound } : GameComponentProps) {
     // Extraire les solutions trouvées
     const solutionsFound: WordSolution[] = useMemo(() => {
         if (!data?.words_found) return [];
-        return Object.values(data.words_found).flat();
+        return data.words_found;
     }, [data?.words_found]);
 
 
@@ -42,13 +36,10 @@ export function WordSearchScreen({ playSound } : GameComponentProps) {
         data?.grid_data ?? [],
         solutionsFound,
         game.ws,
-        game.me?.id ?? '',
+        game.me.id,
     );
 
-    // Liste des mots trouvés
-    const allWordsFound = useMemo(() => {
-        return solutionsFound.map((sol) => sol.word);
-    }, [solutionsFound]);
+
 
     if (!data || !data.grid_data) {
         return (
@@ -68,8 +59,9 @@ export function WordSearchScreen({ playSound } : GameComponentProps) {
                 <SidePanel
                     theme={data.theme}
                     wordsToFind={data.words_to_find}
-                    wordsFound={allWordsFound}
+                    wordsFound={solutionsFound}
                     gridSize={data.grid_data.length}
+                    myPlayerId={game.me.id}
                 />
             </div>
         </div>

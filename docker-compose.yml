@@ -71,11 +71,38 @@ services:
       POSTGRES_USER: user_db
       POSTGRES_PASSWORD: password
       POSTGRES_DB: oneoone_db
-
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend_network 
+
+  # postgres_db_dev:
+  #   image: postgres:16-alpine
+  #   container_name: oneoone_postgres_dev
+  #   environment:
+  #     POSTGRES_USER: user_db
+  #     POSTGRES_PASSWORD: password
+  #     POSTGRES_DB: oneoone_db
+
+  #   ports:
+  #     - "5433:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+
+
+  # redis_cache_dev:
+  #   image: redis:7-alpine
+  #   container_name: oneoone_redis_dev
+    
+  #   # Persistance des données de cache Redis
+  #   volumes:
+  #     - redis_data:/data
+
+  #   ports:
+  #     - "6379:6379"
+      
+
+
 
 
 # -----------------------------------------------------------

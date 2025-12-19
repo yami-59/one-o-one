@@ -1,4 +1,4 @@
-import { Volume2, VolumeX, Clock, User, Crown, Medal,Loader2 } from 'lucide-react';
+import { Volume2, VolumeX, Clock, User, Crown, Medal } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { useState, useEffect,useCallback,useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { useGameWebSocket } from '../Game/hooks/useGameWebSocket';
 import { type GameBaseData } from '../Game/types/GameInterface';
 import { useGameTimer } from '../Game/hooks/useGameTimer';
 import { createPlaySound } from '../Game/types/GameInterface';
+import Loader from '../components/Loader';
 
 // Helper pour formater le nom
 const formatPlayerName = (username: string | undefined, fallback: string): string => {
@@ -32,7 +33,6 @@ const DEMO_DATA = {
 
 function GamePageInner() {
     const auth = useAuth();
-    const [status] = useState<'waiting' | 'countdown' | 'in-progress' | 'finished'>('in-progress');
     const navigate = useNavigate();
     const game = useGame();
     const duration = game.gameData ? (game.gameData as GameBaseData).game_duration : null;
@@ -60,7 +60,7 @@ function GamePageInner() {
     // Récupérer la config du jeu
     const gameConfig = getGameConfig(game.gameName!);
 
-
+    useEffect(()=>{console.log(game.countdown)},[game])
     if (!gameConfig) {
         navigate('/')
         return 
@@ -68,6 +68,8 @@ function GamePageInner() {
 
 
     const GameComponent = gameConfig.component;
+
+    
 
 
   return (
@@ -183,10 +185,10 @@ function GamePageInner() {
       </div>
 
       {/* Countdown Overlay */}
-      {status === 'countdown' && (
+      {game.status === GameStatus.STARTING_COUNTDOWN && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
           <div className="text-center">
-            <div className="text-9xl font-bold bg-linear-to-br from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-black animate-pulse drop-shadow-2xl">
+            <div className="text-9xl font-bold bg-linear-to-br from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent   animate-pulse drop-shadow-2xl">
               {game.countdown}
             </div>
             <p className="mt-8 text-2xl text-gray-300">Préparez-vous...</p>
@@ -195,12 +197,12 @@ function GamePageInner() {
       )}
 
       {/* Waiting Overlay */}
-      {status === 'waiting' && (
+      {game.status === GameStatus.WAITING_FOR_PLAYERS && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center">
           <div className="flex flex-col items-center space-y-6">
             <div className="relative">
-              <div className="w-20 h-20 rounded-full border-4 border-purple-500/30 border-t-purple-500 animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
+                <Loader  variant='dots' size='xl' fullscreen></Loader>
+                <div className="absolute inset-0 flex items-center justify-center">
                 <User className="w-8 h-8 text-purple-400" />
               </div>
             </div>
@@ -253,7 +255,7 @@ export default function GamePage() {
     }, [auth, gameName, navigate]);
 
     if (auth.isLoading) {
-        return <Loader2 size={40} />;
+        return <Loader variant="dots" size="lg" fullscreen />;
     }
 
     if (!auth.isAuthenticated || !gameId || !gameName || !auth.userInfo) {

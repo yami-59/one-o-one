@@ -8,7 +8,7 @@ import {
     type AuthData,
     type UserProps,
 } from './AuthContext';
-import { Loader2 } from 'lucide-react';
+import Loader from '../components/Loader';
 
 // =============================================================================
 // CONSTANTS
@@ -178,7 +178,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // ─────────────────────────────────────────────────────────────────────────
 
     if (isLoading) {
-        return <Loader2 size={40} />;
+        return <Loader variant='dots'  size='xl' fullscreen></Loader>;
     }
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
