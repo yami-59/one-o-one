@@ -7,7 +7,7 @@ import GameOverlay from '../Game/components/GameOverlay';
 import { GameStatus } from '../shared/GameMessages';
 import { useGame } from '../Game/context/GameContext';
 import GameProvider from '../Game/context/GameProvider';
-import { getGameConfig, isValidGame } from '../Game/registry/gameRegistry';
+import { getGameConfig, isValidGame } from '../Game/registry/GameRegistry';
 import { useGameWebSocket } from '../Game/hooks/useGameWebSocket';
 import { type GameBaseData } from '../Game/types/GameInterface';
 import { useGameTimer } from '../Game/hooks/useGameTimer';
@@ -59,15 +59,15 @@ function GamePageInner() {
 
     // Récupérer la config du jeu
     const gameConfig = getGameConfig(game.gameName!);
+    const GameComponent = gameConfig?.component;
 
     useEffect(()=>{console.log(game.countdown)},[game])
-    if (!gameConfig) {
+    if (!gameConfig || !GameComponent) {
         navigate('/')
         return 
     }
 
 
-    const GameComponent = gameConfig.component;
 
     
 

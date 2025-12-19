@@ -22,9 +22,10 @@ export interface GameComponentProps {
 export interface GameConfig {
     id: string;
     displayName: string;
-    component: React.ComponentType<GameComponentProps>;
-    duration: number;
-    durationString: string;
+    component?: React.ComponentType<GameComponentProps>;
+    players?:number
+    duration: string;
+    color?:string
     difficulty: 'easy' | 'medium' | 'hard';
     description: string;
     icon?: React.ReactNode;

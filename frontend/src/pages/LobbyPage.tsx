@@ -1,45 +1,13 @@
-import { useState } from 'react';
-import { Trophy, Users, Gamepad2, Zap, Crown, Medal, Star, ChevronRight, Play, Lock, Search, Loader2 } from 'lucide-react';
+import {  useState } from 'react';
+import { Trophy, Users, Gamepad2, Zap, Crown, Medal, Star, ChevronRight, Play, Lock, Search ,Clock} from 'lucide-react';
 import Navbar from '../components/Navbar';
 import { useAuth } from '../auth/AuthContext';
 import Login from '../components/Login';
-
+import { GAME_REGISTRY } from '../Game/registry/GameRegistry';
 import  { type MatchMakingProps,useMatchmaking } from '../Game/hooks/useMatchMaking';
+import Loader from '../components/Loader';
 
-// =============================================================================
-// DEMO DATA
-// =============================================================================
-
-const AVAILABLE_GAMES = [
-  {
-    id: 'wordsearch',
-    displayName: 'Word Search',
-    description: 'Trouvez des mots cachés avant votre adversaire',
-    icon: '🔤',
-    players: 234,
-    difficulty: 'Facile',
-    color: 'from-blue-500 to-cyan-500',
-  },
-  {
-    id: 'puzzle',
-    displayName: 'Speed Puzzle',
-    description: 'Résolvez des puzzles le plus rapidement possible',
-    icon: '🧩',
-    players: 156,
-    difficulty: 'Moyen',
-    color: 'from-purple-500 to-pink-500',
-  },
-  {
-    id: 'memory',
-    displayName: 'Memory Master',
-    description: 'Testez votre mémoire dans des défis rapides',
-    icon: '🧠',
-    players: 89,
-    difficulty: 'Difficile',
-    color: 'from-orange-500 to-red-500',
-    locked: true,
-  },
-];
+const AVAILABLE_GAMES = Object.values(GAME_REGISTRY)
 
 const TOP_PLAYERS = [
   { name: 'AlphaWolf', score: 2400, avatar: '🐺', rank: 1 },
@@ -74,17 +42,27 @@ function MatchMakingLobby({
             isAuthenticated,
             onAuthRequired,
         });
+
+    const handleSearchClick = () =>{
+      if(!isAuthenticated || !token) {
+        onAuthRequired?.()
+      }
+      else {
+        startSearch()
+      }
+    }
+
     return (
 
 
         <div className="flex flex-row gap-3 justify-center pt-4">
            
            <button className="flex gap-x-3 flex-row px-8 py-4 rounded-xl bg-linear-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 transition-all duration-200 shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 font-bold text-lg"
-           onClick={startSearch}
+           onClick={handleSearchClick}
            disabled={isLoading}
            
            >
-                {isSearching ? <Loader2 size={24} className="animate-spin" />:<Search size={24} />}
+                {isSearching ? <Loader size='sm' variant='spinner' />:<Search size={24} />}
 
                 {isSearching ? (
                   <>
@@ -179,7 +157,7 @@ export default function LobbyPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {AVAILABLE_GAMES.map((game) => {
                     const isSelected = selectedGame.id === game.id;
-                    const isLocked = game.locked;
+                    const isLocked = game.component === undefined ? true :false;
 
                     return (
                       <button
@@ -224,8 +202,15 @@ export default function LobbyPage() {
 
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2 text-sm text-gray-400">
-                              <Users className="w-4 h-4" />
+                              <Users size={16} />
                               <span>{game.players} en ligne</span>
+                              <div className="flex items-center gap-2">
+                                
+                                <span className="flex text-xs px-2 gap-2 py-1 rounded-full bg-white/10 border border-white/20">
+                                  <Clock size={16}></Clock>
+                                  {game.duration}
+                                </span>
+                              </div>
                             </div>
                             {isSelected && !isLocked && (
                               <div className="flex items-center gap-1 text-purple-400">
@@ -264,11 +249,8 @@ export default function LobbyPage() {
                     </p>
                   </div>
 
-                  <MatchMakingLobby {...auth} gameName={selectedGame.id}></MatchMakingLobby>
+                  <MatchMakingLobby {...auth} gameName={selectedGame.id} onAuthRequired={() => setShowLoginModal(true) }></MatchMakingLobby>
 
-                  <p className="text-xs text-gray-500 pt-2">
-                    Vous serez associé à un joueur de niveau similaire
-                  </p>
                 </div>
               </div>
             </div>

@@ -1,7 +1,7 @@
 // /frontend/src/game/registry/gameRegistry.tsx
 import type { GameConfig } from '../types/GameInterface';
 import { WordSearchScreen } from '../../wordsearch/components/WordSearchScreen';
-import {  Zap } from 'lucide-react';
+import WordSearchIcon from '../components/WordSearchIcon';
 
 // import { MemoryGameScreen } from '../../memorygame/components/MemoryGameScreen';
 
@@ -17,19 +17,23 @@ export const GAME_REGISTRY: Record<string, GameConfig> = {
         id:'wordsearch',
         displayName: 'Mots Mêlés',
         component: WordSearchScreen,
-        duration: 300,
-        durationString:'5 min',
+        duration:'5 min',
         difficulty: 'easy',
+        players: 89,
         description: 'Partie rapide de 5 minutes',
-        icon: <Zap size={20} className="text-brand-yellow" />,
+        icon: <WordSearchIcon size={64} animated  variant='gradient'/>,
     },
-    // memory: {
-    //     displayName: 'Memory',
-    //     component: MemoryGameScreen,
-    //     defaultDuration: 120,
-    //     playerCount: 2,
-    //     icon: '🧠',
-    // },
+    memory:{
+        id: 'memory',
+        displayName: 'Memory Master',
+        description: 'Testez votre mémoire dans des défis rapides',
+        icon: '🧠',
+        duration:'5 min',
+        players: 89,
+        difficulty: 'hard',
+        color: 'from-orange-500 to-red-500',
+    }
+
 };
 
 export function getGameConfig(gameName: string): GameConfig | null {

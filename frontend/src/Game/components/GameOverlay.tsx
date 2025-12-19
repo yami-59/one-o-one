@@ -1,8 +1,9 @@
 import { useEffect } from 'react';
-import { Crown, Frown, Handshake, Flag, Trophy, Home, Play, Sparkles,Loader2 } from 'lucide-react';
+import { Crown, Frown, Handshake, Flag, Trophy, Home, Play, Sparkles } from 'lucide-react';
 import { type GameFinishedMessage } from '../types/GameInterface';
 import type { SoundType } from '../types/GameInterface';
 import  { type MatchMakingProps,useMatchmaking } from '../hooks/useMatchMaking';
+import Loader from '../../components/Loader';
 // =============================================================================
 // TYPES
 // =============================================================================
@@ -129,9 +130,9 @@ function MatchMakingOverlay({
         onClick={isSearching ? cancelSearch : startSearch}
         disabled={isLoading}
         className="w-full py-3.5 bg-linear-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold rounded-xl transition-all duration-200 shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-105 active:scale-95 flex items-center justify-center gap-2">
-        {isLoading || isSearching ? (
-                <Loader2 size={20} className="animate-spin" />
-            )  : (<Play size={20} />)}
+        {isLoading || isSearching ? 
+                <Loader size='sm' variant='spinner' />
+              : <Play size={20} />}
 
         {
             isSearching ? 
