@@ -60,8 +60,7 @@ async def login_guest(session: SessionDep):
     # 4. Retourner le jeton et l'identifiant au client
     return TokenResponse(
         access_token=access_token,
-        user_info=db_user
-        
+        user_info=db_user 
     )
 
 @router.post("/refresh", status_code=status.HTTP_200_OK, response_model=TokenResponse)

@@ -17,8 +17,10 @@ from app.api.matchmaking import (
 from app.api.websocket import (
     router as websocket_router,
 ) 
-from app.core.matchmaker_service import STOP_EVENT
 from app.api.ws_auth import ( router as ws_auth_router)
+from app.api.health import (router as health_router)
+
+from app.core.matchmaker_service import STOP_EVENT
 
 
 
@@ -77,7 +79,7 @@ app.include_router(matchmaking_router, prefix="/api/v1", tags=["matchmaking"])
 app.include_router(guest_router, prefix="/api/v1", tags=["create new guest Account"])
 app.include_router(websocket_router, prefix="/api/v1", tags=["websocket"])
 app.include_router(ws_auth_router,prefix="/api/v1",tags=["websocket authentification"])
-
+app.include_router(health_router)
 
 @app.get("/")
 async def read_root():
