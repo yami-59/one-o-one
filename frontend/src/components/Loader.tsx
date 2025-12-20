@@ -103,9 +103,7 @@ export default function Loader({
     if (fullscreen) {
         return (
             <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-xl bg-slate-950/80">
-                <div className="backdrop-blur-2xl bg-white/5 border border-white/10 rounded-3xl p-12 shadow-2xl">
-                    {renderLoader()}
-                </div>
+                {renderLoader()}
             </div>
         );
     }

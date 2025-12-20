@@ -7,7 +7,7 @@ import GameGrid from './GameGrid';
 import SidePanel from './SidePanel';
 import type { WordSolution, WordSearchData } from '../types';
 import type { GameComponentProps } from '../../Game/types/GameInterface';
-import { Loader2 } from 'lucide-react';
+import Loader from '../../components/Loader';
 
 export function WordSearchScreen({ playSound } : GameComponentProps) {
     const game = useGame();
@@ -43,7 +43,7 @@ export function WordSearchScreen({ playSound } : GameComponentProps) {
 
     if (!data || !data.grid_data) {
         return (
-            <Loader2></Loader2>
+            <Loader variant='game' fullscreen size='lg' ></Loader>
         );
     }
 

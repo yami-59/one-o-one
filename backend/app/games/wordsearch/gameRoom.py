@@ -2,7 +2,7 @@
 
 import asyncio
 from typing import Any, Set
-
+from app.games.constants import GameStatus,GameMessages
 from fastapi import WebSocket, WebSocketDisconnect
 from redis.asyncio import Redis as AsyncRedis
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -408,20 +408,110 @@ class GameRoom:
 
         print(f"🏆 [{self._game_id}] Partie terminée. Raison: {reason}, Gagnant: {winner_username or 'match nul'}")
 
-    # async def on_player_disconnected(self, player_id: str) -> None:
-    #     """Appelé quand un joueur se déconnecte."""
-    #     self.remove_player(player_id)
+    async def handle_player_message(
+            self, 
+            player_id: str, 
+            data: dict,
+    ) -> None:
+            """Traite un message reçu d'un joueur."""
+            message_type = data.get("type")
 
-    #     if self._state == GameStatus.GAME_IN_PROGRESS:
-    #         # Donner la victoire à l'adversaire
-    #         opponent_id = self.get_opponent_id(player_id)
-    #         await self._end_game(winner_id=opponent_id, reason="opponent_disconnected")
-    #     else:
-    #         # Notifier les autres
-    #         await self.broadcast({
-    #             "type": "player_disconnected",
-    #             "player_id": player_id,
-    #         })
+            
+            match message_type:
+                case 'abandon' :
+
+                    print('abandon reçu ')
+
+                    result = await self._controller.handle_abandon(player_id)
+
+                    print(f"obtention du resultat de l'abandon {result}")
+            
+                    if result.get("status") == GameStatus.GAME_FINISHED:
+                        print("fin de la game")
+                        await self._end_game({
+                            **result,
+                            "abandon_player_id": player_id,
+                            "abandon_username": self.get_username(player_id),
+                        })
+
+                    pass
+
+                case 'player_ready':
+                    await self.on_player_ready(player_id)
+
+
+                # Gérer les différents types de messages
+                case  "selection_update":
+                    # Transmettre la sélection à l'adversaire (aperçu en temps réel)
+                    opponent_id = self.get_opponent_id(player_id)
+                    if opponent_id:
+                        await self.send_to_player(opponent_id, {
+                            **data,
+                            "from": self.get_username(player_id),
+                        })
+                
+                case  "submit_selection":
+                    solution = data.get("solution")
+                    result  = await self._controller.process_player_action(player_id,solution)
+
+
+                    if result.get("success"):
+                        # Récupérer l'état mis à jour pour calculer les mots restants
+
+                        await self.broadcast({
+                            "type":GameMessages.WORD_FOUND_SUCCESS,
+                            **result,
+                            "found_by":self.get_username(player_id)
+                        })
+
+                        await self.broadcast({
+                            "type":GameMessages.SCORE_UPDATE,
+                            "player_id":player_id,
+                            "new_score":result["new_score"]
+                        })
+
+                        result =  await self._controller.check_game_completed()
+
+                        print(f"resultat recupéré dans le websocket : {result}")
+
+                        if(result) :
+                            await self._end_game(result)
+                    
+                    else:
+                        await self.send_to_player(player_id,{**result,"from":self.get_username(player_id)})
+                    
+                    pass
+
+                case _:
+                    # Transmettre les autres messages à l'adversaire
+                    opponent_id = self.get_opponent_id(player_id)
+                    if opponent_id:
+                        await self.send_to_player(opponent_id, {
+                            **data,
+                            "from": self.get_username(player_id),
+                        })
+
+
+    async def handle_player_disconnect( self,player_id: str, game_id: str) -> None:
+        """Gère la déconnexion d'un joueur."""
+        self.remove_player(player_id)
+
+        print(f"player {player_id} removed from the room ")
+
+        # Notifier l'adversaire
+        opponent_id = self.get_opponent_id(player_id)
+        if opponent_id:
+            await self.send_to_player(opponent_id, {
+                "type": "opponent_disconnected",
+                "message": "Votre adversaire s'est déconnecté.",
+            })
+
+        # # Si la partie était en cours, la terminer
+        # if state == GameStatus.GAME_IN_PROGRESS and opponent_id:
+        #     await self.end_game(winner_id=opponent_id, reason="opponent_disconnected")
+
+
+
 
     async def close_all_connections(self) -> None:
         """Ferme toutes les connexions WebSocket."""

@@ -3,6 +3,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import GamePage from './pages/GamePage.tsx';
 import LobbyPage from './pages/LobbyPage.tsx';
+import TestPage from './pages/TestPage.tsx';
 function App() {
     return (
         // 1. BrowserRouter : Active le routage pour l'application
@@ -14,7 +15,7 @@ function App() {
 
                 <Route path="/lobby" element={<LobbyPage />} />
                 <Route path="/game/:id" element={<GamePage />} />
-                
+                <Route path="/test" element={<TestPage></TestPage>}></Route>
                 {/* Redirections par défaut */}
                 <Route path="/" element={<Navigate to="/lobby" replace />} />
                 <Route path="*" element={<Navigate to="/lobby" replace />} />

@@ -1,6 +1,6 @@
 import { Volume2, VolumeX, Clock, User, Crown, Medal } from 'lucide-react';
 import Navbar from '../components/Navbar';
-import { useState, useEffect,useCallback,useMemo } from 'react';
+import { useState, useEffect,useCallback} from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import GameOverlay from '../Game/components/GameOverlay';
@@ -11,7 +11,7 @@ import { getGameConfig, isValidGame } from '../Game/registry/GameRegistry';
 import { useGameWebSocket } from '../Game/hooks/useGameWebSocket';
 import { type GameBaseData } from '../Game/types/GameInterface';
 import { useGameTimer } from '../Game/hooks/useGameTimer';
-import { createPlaySound } from '../Game/types/GameInterface';
+// import { type SoundType } from '../Game/types/GameInterface';
 import Loader from '../components/Loader';
 
 // Helper pour formater le nom
@@ -19,6 +19,35 @@ const formatPlayerName = (username: string | undefined, fallback: string): strin
     if (!username) return fallback;
     return username.startsWith('guest-') ? 'guest' : username;
 };
+
+// =============================================================================
+// UTILITAIRE AUDIO
+// =============================================================================
+
+/**
+ * Crée une fonction playSound réutilisable.
+ * Peut être utilisée dans n'importe quel composant.
+ */
+// const playSound = (() => {
+//   // Cache pour stocker les instances audio
+//   const audioCache: Record<string, HTMLAudioElement> = {};
+
+//   return (type: SoundType, soundEnabled: boolean) => {
+//     if (!soundEnabled) return;
+
+//     // Si le son n'est pas encore dans le cache, on le crée
+//     if (!audioCache[type]) {
+//       audioCache[type] = new Audio(`/sounds/${type}.mp3`);
+//     }
+
+//     const audio = audioCache[type];
+    
+//     // Reset du son au début (si on clique vite, le son redémarre)
+//     audio.currentTime = 0; 
+//     audio.play().catch(e => console.warn("Audio play failed", e));
+//   };
+// })();
+
 // Demo data
 const DEMO_DATA = {
   player1: { name: 'TechMaster', score: 1250, avatar: '🎮' },
@@ -39,7 +68,6 @@ function GamePageInner() {
     const [soundEnabled, setSoundEnabled] = useState(true);
     const { formattedTime } = useGameTimer(game.startTimeStamp, duration);
     // 🎯 Crée la fonction playSound une seule fois
-    const playSound = useMemo(() => createPlaySound(), []);
     const handleQuitButton = useCallback(() => {
         if (!game.ws || game.ws.readyState !== WebSocket.OPEN) {
             console.warn('WebSocket non connecté');
@@ -61,7 +89,7 @@ function GamePageInner() {
     const gameConfig = getGameConfig(game.gameName!);
     const GameComponent = gameConfig?.component;
 
-    useEffect(()=>{console.log(game.countdown)},[game])
+    useEffect(()=>{console.log("compte à rebours : ",game.countdown)},[game])
     if (!gameConfig || !GameComponent) {
         navigate('/')
         return 
@@ -164,7 +192,7 @@ function GamePageInner() {
           </div>
 
           {/* Game Canvas Area */}
-          <GameComponent playSound={playSound}/>
+          <GameComponent />
 
           {/* Action buttons */}
           <div className="flex gap-4 justify-center mt-3">
@@ -224,7 +252,6 @@ function GamePageInner() {
                 finishedData={game.finishedData}
                 myId={game.me.id}
                 isAuthenticated={auth.isAuthenticated}
-                playSound={playSound}
                 onLobby={() => navigate('/lobby')}
             />
         )}

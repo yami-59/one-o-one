@@ -178,7 +178,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // ─────────────────────────────────────────────────────────────────────────
 
     if (isLoading) {
-        return <Loader variant='dots'  size='xl' fullscreen></Loader>;
+        return <Loader variant='spinner'  size='lg' fullscreen></Loader>;
     }
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

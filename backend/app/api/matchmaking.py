@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from app.core.redis import RedisDep
 from app.games.constants import Games
-from app.auth.lib import TokenDep, get_current_user_id
+from app.lib.auth import TokenDep, get_current_user_id
 from app.games.constants import MATCH_NOTIFICATION_PREFIX,QUEUE_KEY_PREFIX
 
 router = APIRouter(prefix="/matchmaking", tags=["matchmaking"])

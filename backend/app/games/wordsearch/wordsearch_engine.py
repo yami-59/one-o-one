@@ -288,8 +288,8 @@ class WordSearchEngine:
         #     await self._db_session.rollback()
         #     return {"status": "error", "detail": f"Échec DB: {e}"}
 
-        # 4. Nettoyage Redis
-        await self._redis.delete(f"{GAME_STATE_KEY_PREFIX}{self._game_id}")
+        # # 4. Nettoyage Redis
+        # await self._redis.delete(f"{GAME_STATE_KEY_PREFIX}{self._game_id}")
 
         return {
             "status": GameStatus.GAME_FINISHED,

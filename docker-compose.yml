@@ -44,9 +44,9 @@ services:
       - ./backend/.env.local
     # IMPORTANT: Démarre APRÈS Redis et (si local) PostgreSQL
     depends_on:
-      redis_cache : 
+      redis_cache: 
         condition: service_healthy
-      postgres_db : 
+      postgres_db: 
         condition: service_healthy
     restart: always
     networks:
@@ -130,4 +130,4 @@ volumes:
 
 networks:
   backend_network:
-    driver: bridge 
+    driver: bridge # Le type de réseau par défaut pour l'isolation

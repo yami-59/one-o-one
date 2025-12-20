@@ -34,6 +34,7 @@ function MatchMakingLobby({
   const {
             isSearching,
             isLoading,
+            isFound,
             startSearch,
             cancelSearch,
         } = useMatchmaking({
@@ -52,6 +53,7 @@ function MatchMakingLobby({
       }
     }
 
+
     return (
 
 
@@ -69,7 +71,7 @@ function MatchMakingLobby({
                     <span className="text-sm">En attente d'un Joueur ...</span>
                   </>
               ) : (
-                <span className="text-sm"> {'Trouver un adversaire'} </span>
+                <span className="text-sm"> {isFound ? 'Joueur trouvée ...':'Trouver un adversaire'} </span>
               )}
           </button>
           {/* Bouton Annuler */}

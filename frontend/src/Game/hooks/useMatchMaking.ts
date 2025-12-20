@@ -39,6 +39,7 @@ interface UseMatchmakingOptions {
 interface UseMatchmakingReturn {
     status: MatchmakingStatus;
     isSearching: boolean;
+    isFound:boolean;
     isLoading: boolean;
     error: string | null;
     matchData: MatchFoundResponse | null;
@@ -248,7 +249,7 @@ export function useMatchmaking({
                     if (isMountedRef.current) {
                         navigate(`/game/${gameName}/${response.game_id}/`);
                     }
-                }, 500);
+                }, 1000);
             }
         };
 
@@ -270,6 +271,7 @@ export function useMatchmaking({
     return {
         status,
         isSearching: status === 'searching',
+        isFound: status === 'found',
         isLoading,
         error,
         matchData,

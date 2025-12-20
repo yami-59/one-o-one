@@ -25,7 +25,7 @@ function getPlayerScore(gameData: GameData, playerId: string ): number {
 
 
 // Ajouter au début du fichier
-let globalWsInstance = 0;
+// let globalWsInstance = 0;
 
 
 
@@ -34,10 +34,10 @@ export function useGameWebSocket(game: GameContextValue) {
     const isConnecting = useRef(false);
     const isConnected = useRef(false);
 
-    const instanceId = useRef(++globalWsInstance);
+    // const instanceId = useRef(++globalWsInstance);
 
     // Log l'instance pour debug
-    console.log(`🔷 [Instance ${instanceId.current}] Hook créé pour ${game.me.id}`);
+    // console.log(`🔷 [Instance ${instanceId.current}] Hook créé pour ${game.me.id}`);
 
 
 
@@ -101,6 +101,8 @@ export function useGameWebSocket(game: GameContextValue) {
             isConnecting.current = false;
             isConnected.current = true;
             wsRef.current = ws;
+            
+            if(wsRef.current) console.log("Reference websocket attribué")
 
             // 🎯 DEBUG: Vérifier que setWs est appelé
             gameRef.current.setWs(ws);
@@ -109,11 +111,13 @@ export function useGameWebSocket(game: GameContextValue) {
         };
 
         ws.onclose = (event) => {
-            console.log(`🔌 [Instance ${instanceId.current}] WebSocket fermé pour ${gameRef.current.me.id}: code=${event.code}`);
+            // console.log(`🔌 [Instance ${instanceId.current}] WebSocket fermé pour ${gameRef.current.me.id}: code=${event.code}`);
             console.log(`🔌 WebSocket fermé: code=${event.code}, reason=${event.reason}, wasClean=${event.wasClean}`);
             isConnected.current = false;
             isConnecting.current = false;
             wsRef.current = null;
+
+            if(!wsRef.current) console.log("Réference websocket null")
             
             
 
@@ -207,19 +211,19 @@ export function useGameWebSocket(game: GameContextValue) {
             }
         };
 
-        wsRef.current = ws;
+        // wsRef.current = ws;
     }, [fetchWsToken]);
 
     useEffect(() => {
         console.log('🟢 useEffect: montage');
         
-        const instanceCopy = instanceId.current
+        // const instanceCopy = instanceId.current
         
         connect();
 
         return () => {
-            console.log(`🔴 [Instance ${instanceCopy}] Cleanup pour ${gameRef.current.me.id}`);
-            console.log('🔴 useEffect: démontage');
+            // console.log(`🔴 [Instance ${instanceCopy}] Cleanup pour ${gameRef.current.me.id}`);
+            // console.log('🔴 useEffect: démontage');
             isConnected.current = false;
             isConnecting.current = false;
             if (wsRef.current) {

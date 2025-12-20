@@ -3,7 +3,7 @@ from sqlmodel import SQLModel, select
 
 from app.core.db import SessionDep
 from app.models.tables import User
-from app.auth.lib import (
+from app.lib.auth import (
     create_access_token,
     generate_guest_username,
     generate_user_id,

@@ -9,6 +9,8 @@ SOLUTION_KEY_PREFIX = "game:solution:"
 
 MATCH_NOTIFICATION_PREFIX = "match_notification:"
 
+WS_TOKEN_PREFIX = "ws_auth:"
+
 
 class GameStatus(str, Enum):
     WAITING_FOR_PLAYERS = "waiting_for_players"

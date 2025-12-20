@@ -70,8 +70,8 @@ class WordSearchController:
         try:
             # db_session.add(new_session)
             # await db_session.commit()
-            await redis_client.set(f"{GAME_STATE_KEY_PREFIX}{game_id}", initial_state.model_dump_json())
-            await redis_client.set(f"{SOLUTION_KEY_PREFIX}{game_id}",solutions.model_dump_json())
+            await redis_client.set(f"{GAME_STATE_KEY_PREFIX}{game_id}", initial_state.model_dump_json(),ex=1800)
+            await redis_client.set(f"{SOLUTION_KEY_PREFIX}{game_id}",solutions.model_dump_json(),ex=1800)
         except Exception:
             # await db_session.rollback()
             return None

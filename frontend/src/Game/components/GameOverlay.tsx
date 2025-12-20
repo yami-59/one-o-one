@@ -18,7 +18,7 @@ interface GameOverlayProps {
     isAuthenticated: boolean;
     finishedData:GameFinishedMessage;
     myId:string;
-    playSound:((type: SoundType) => void) 
+    playSound?:((type: SoundType) => void) 
     onLobby: () => void;
 }
 
@@ -168,7 +168,7 @@ export default function GameOverlay({
 
     useEffect(() => {
         console.log(result);
-        if (result === 'win' || result === 'abandon') playSound('win');
+        if ((result === 'win' || result === 'abandon')&& playSound) playSound('win');
     }, [playSound, result]);
 
     return (

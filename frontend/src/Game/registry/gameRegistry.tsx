@@ -1,9 +1,7 @@
 // /frontend/src/game/registry/gameRegistry.tsx
 import type { GameConfig } from '../types/GameInterface';
 import { WordSearchScreen } from '../../wordsearch/components/WordSearchScreen';
-import WordSearchIcon from '../components/WordSearchIcon';
-
-// import { MemoryGameScreen } from '../../memorygame/components/MemoryGameScreen';
+import WordSearchIcon from '../../wordsearch/components/WordSearchIcon';
 
 /**
  * Registre de tous les jeux disponibles.

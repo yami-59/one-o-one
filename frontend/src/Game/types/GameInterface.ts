@@ -13,7 +13,7 @@ export type SoundType = 'pop' | 'win' | 'success' ;
  */
 export interface GameComponentProps {
     /** Fonction pour jouer un son */
-    playSound: (type: SoundType) => void;
+    playSound?: (type: SoundType) => void;
 }
 
 /**
@@ -31,21 +31,6 @@ export interface GameConfig {
     icon?: React.ReactNode;
 }
 
-// =============================================================================
-// UTILITAIRE AUDIO
-// =============================================================================
-
-/**
- * Crée une fonction playSound réutilisable.
- * Peut être utilisée dans n'importe quel composant.
- */
-export const createPlaySound = () => {
-    return (type: SoundType) => {
-        const audio = new Audio(`/sounds/${type}.mp3`);
-        audio.play().catch(e => console.log("Audio play failed", e));
-        console.log(`🔊 Son joué : ${type}`);
-    };
-};
 
 
 // Interface de base commune à tous les jeux

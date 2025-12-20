@@ -9,16 +9,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.auth import router as guest_router
 from app.core.db import check_db_connection
 from app.core.matchmaker_service import run_matchmaking_consumer
-from app.core.redis import redis_client, shutdown_redis, startup_redis
+from app.core.redis import  shutdown_redis, startup_redis
 from app.core.settings import settings
 from app.api.matchmaking import (
     router as matchmaking_router,
-)  # 🚀 Routeur Matchmaking
+)  
 from app.api.websocket import (
     router as websocket_router,
-)  # 🚀 Routeur Matchmaking
+) 
 from app.core.matchmaker_service import STOP_EVENT
-
+from app.api.ws_auth import ( router as ws_auth_router)
 
 
 
@@ -47,7 +47,6 @@ async def lifespan(app: FastAPI):
         with suppress(asyncio.CancelledError):
             await matchmaker_task
 
-    await asyncio.sleep(0)  # ← TRÈS important pour pytest
 
     await shutdown_redis()
     print("Arrêt de l'API.")
@@ -74,10 +73,10 @@ app.add_middleware(
     allow_headers=["*"],  # Autoriser tous les en-têtes (y compris X-Player-Identifier)
 )
 
-# Route principale pour le matchmaking (création de partie)
 app.include_router(matchmaking_router, prefix="/api/v1", tags=["matchmaking"])
 app.include_router(guest_router, prefix="/api/v1", tags=["create new guest Account"])
 app.include_router(websocket_router, prefix="/api/v1", tags=["websocket"])
+app.include_router(ws_auth_router,prefix="/api/v1",tags=["websocket authentification"])
 
 
 @app.get("/")
