@@ -143,7 +143,7 @@ async def run_matchmaking_consumer() -> None:
         print("❌ Impossible de démarrer: Redis non disponible")
         return
     
-    # # 🎯 Nettoyer les files au démarrage
+    # # # 🎯 Nettoyer les files au démarrage
     # await clear_all_queues(redis_client)
 
     while not STOP_EVENT.is_set():
