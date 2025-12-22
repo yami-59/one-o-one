@@ -1,4 +1,6 @@
 import asyncio
+import datetime
+import time
 from typing import Any, Dict, Optional
 
 from redis.asyncio import Redis as AsyncRedis
@@ -33,6 +35,7 @@ class WordSearchController:
         self._redis_client = redis_client
         self._engine = WordSearchEngine(game_id, db_session, redis_client)
         self._timeout_task: asyncio.Task | None = None
+        self.start_time = time.time()
 
     @classmethod
     async def initialize_game(
@@ -68,12 +71,16 @@ class WordSearchController:
         )
 
         try:
-            # db_session.add(new_session)
-            # await db_session.commit()
-            await redis_client.set(f"{GAME_STATE_KEY_PREFIX}{game_id}", initial_state.model_dump_json(),ex=1800)
-            await redis_client.set(f"{SOLUTION_KEY_PREFIX}{game_id}",solutions.model_dump_json(),ex=1800)
+            db_session.add(new_session)
+            await db_session.commit()
+            await redis_client.set(f"{GAME_STATE_KEY_PREFIX}{game_id}", initial_state.model_dump_json())
+            await redis_client.set(f"{SOLUTION_KEY_PREFIX}{game_id}",solutions.model_dump_json())
+            # Compteur pour le lobby (la partie du jour)
+            today = datetime.date.today().isoformat()
+            await redis_client.incr(f"stats:games_count:{today}")
+            await redis_client.expire(f"stats:games_count:{today}", 172800)  # 48 heures
         except Exception:
-            # await db_session.rollback()
+            await db_session.rollback()
             return None
 
         return initial_state.model_dump()
@@ -100,10 +107,11 @@ class WordSearchController:
 
         print("Appelle de check_game_completed dans le controller")
 
-        return await self._engine.check_all_solutions_found()
+        duration = int(time.time() - self.start_time)
+        return await self._engine.check_all_solutions_found(duration = duration)
     
     async def handle_abandon(self, player_id: str) -> Dict[str, Any]:
         """Gère l'abandon d'un joueur."""
-
-        print("appelle de handle abandon dans controller")
-        return await self._engine.finalize_game(abandon_player_id=player_id,reason='abandon')
+        duration = int(time.time() - self.start_time)
+        print(f"Abandon détecté. Durée calculée : {duration} secondes")
+        return await self._engine.finalize_game(abandon_player_id=player_id,reason='abandon', duration=duration)

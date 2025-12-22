@@ -1,6 +1,6 @@
 
 
-import {  useState, useCallback, type ReactNode } from 'react';
+import {  useEffect, useState, useCallback, type ReactNode } from 'react';
 import { type GameStatusType,GameStatus } from '../../shared/GameMessages';
 import { type GameContextValue ,type Player,GameContext} from './GameContext';
 import { type GameFinishedMessage } from '../types/GameInterface';
@@ -28,6 +28,16 @@ export default function GameProvider({ children, gameId, gameName, userId, usern
     const [opponent, setOpponent] = useState<Player | null>(null);
     const [gameData, setGameData] = useState<unknown>(null);
     const [finishedData,setGameFinishedData] = useState<GameFinishedMessage|null>(null)
+
+    useEffect(() => {
+    if (status === GameStatus.IN_PROGRESS && !startTimeStamp) {
+        setStartTimeStamp(Date.now());
+        if (gameData && !(gameData as any).game_duration) {
+            setGameData((prev: unknown) => ({ ...(prev as any), game_duration: 300 }));
+        }
+    }
+}, [status, startTimeStamp, gameData]);
+
     // Actions
     const updateScore = useCallback((playerId: string, score: number) => {
         if (playerId === userId) {

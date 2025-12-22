@@ -7,7 +7,7 @@ import GameOverlay from '../Game/components/GameOverlay';
 import { GameStatus } from '../shared/GameMessages';
 import { useGame } from '../Game/context/GameContext';
 import GameProvider from '../Game/context/GameProvider';
-import { getGameConfig, isValidGame } from '../Game/registry/GameRegistry';
+import { getGameConfig, isValidGame } from '../Game/registry/gameRegistry';
 import { useGameWebSocket } from '../Game/hooks/useGameWebSocket';
 import { type GameBaseData } from '../Game/types/GameInterface';
 import { useGameTimer } from '../Game/hooks/useGameTimer';
@@ -64,9 +64,10 @@ function GamePageInner() {
     const auth = useAuth();
     const navigate = useNavigate();
     const game = useGame();
-    const duration = game.gameData ? (game.gameData as GameBaseData).game_duration : null;
+    const duration = (game.gameData as GameBaseData)?.game_duration ?? null;
+    const { formattedTime, isReady } = useGameTimer(game.startTimeStamp, duration);
+
     const [soundEnabled, setSoundEnabled] = useState(true);
-    const { formattedTime } = useGameTimer(game.startTimeStamp, duration);
     // 🎯 Crée la fonction playSound une seule fois
     const handleQuitButton = useCallback(() => {
         if (!game.ws || game.ws.readyState !== WebSocket.OPEN) {
@@ -129,7 +130,7 @@ function GamePageInner() {
                 <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-linear-to-r from-purple-500/20 to-pink-500/20 border border-purple-400/30">
                   <Clock className="w-5 h-5 text-purple-300" />
                   <span className="text-2xl font-mono tabular-nums tracking-wider text-purple-200">
-                    {formattedTime}
+                    {isReady ? formattedTime : '⏳ Chargement...'}
                   </span>
                 </div>
               </div>

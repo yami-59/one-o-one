@@ -15,6 +15,7 @@ export default function GameGrid({
   handleMouseUp,
   myWord,
   opponentWord,
+
 }: GameGridProps)  {
   const gridSize = gridData.length;
   const totalSize = gridSize * CELL_SIZE + (gridSize - 1) * GAP_SIZE;
