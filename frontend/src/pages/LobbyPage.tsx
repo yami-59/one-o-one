@@ -3,7 +3,7 @@ import { Trophy, Users, Gamepad2, Zap, Crown, Medal, Star, ChevronRight, Play, L
 import Navbar from '../components/Navbar';
 import { useAuth } from '../auth/AuthContext';
 import Login from '../components/Login';
-import { GAME_REGISTRY } from '../Game/registry/gameRegistry';
+import { GAME_REGISTRY } from '../Game/registry/GameRegistry';
 import  { type MatchMakingProps,useMatchmaking } from '../Game/hooks/useMatchMaking';
 import Loader from '../components/Loader';
 
