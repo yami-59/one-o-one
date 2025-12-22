@@ -7,7 +7,7 @@ services:
   frontend:
     # 🎯 Utilise le Dockerfile multi-étape de production
     build:
-      context: ./frontend
+      context: ./frontend_react
       dockerfile: Dockerfile
     image: oneoone_frontend:latest
     container_name: oneoone_frontend
