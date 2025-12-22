@@ -9,6 +9,11 @@ import Loader from '../components/Loader';
 import apiService from '../services/apiService'; // On utilise ton nouveau service
 
 const AVAILABLE_GAMES = Object.values(GAME_REGISTRY);
+// Helper pour formater le nom
+const formatPlayerName = (username: string | undefined, fallback: string): string => {
+    if (!username) return fallback;
+    return username.startsWith('guest-') ? 'guest' : username;
+};
 
 // =============================================================================
 // SUB-COMPONENT: MatchMaking (Ta logique originale)
@@ -39,6 +44,7 @@ function MatchMakingLobby({
     } else {
       startSearch();
     }
+  }
 
 
     return (
@@ -102,7 +108,7 @@ export default function LobbyPage() {
         // 1. Récupérer les stats globales et le classement (public)
         const [globalRes, leaderRes] = await Promise.all([
           apiService.get('/stats/global'),
-          apiService.get('/leaderboard')
+          apiService.get('/leaderboard'),
         ]);
         
         setGlobalLive(globalRes.data);
@@ -181,7 +187,7 @@ export default function LobbyPage() {
                             {auth.userInfo?.username?.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                            <h2 className="text-xl font-bold text-white tracking-tight">{auth.userInfo?.username}</h2>
+                            <h2 className="text-xl font-bold text-white tracking-tight">{formatPlayerName(auth.userInfo?.username,'moi')}</h2>
                             <p className="text-xs text-yellow-500 font-black uppercase tracking-widest flex items-center gap-1">
                                 <Star size={12} fill="currentColor"/> 
                                 {personalStats?.rank ? `RANG #${personalStats.rank}` : 'NON CLASSÉ'}
@@ -191,7 +197,7 @@ export default function LobbyPage() {
                     <div className="flex gap-8 text-right px-4 border-l border-white/5">
                         <div>
                             <p className="text-[10px] text-gray-500 uppercase font-black mb-1">Victoires</p>
-                            <p className="text-xl font-black text-green-400">{auth.userInfo?.victories || 0}</p>
+                            <p className="text-xl font-black text-green-400">{personalStats?.victories}</p>
                         </div>
                         <div>
                             <p className="text-[10px] text-gray-500 uppercase font-black mb-1">Ratio V/D</p>

@@ -12,7 +12,6 @@ from app.core.db import SessionDep
 from app.games.wordsearch.gameRoom import GameRoom
 from app.games.constants import GameMessages
 from sqlmodel.ext.asyncio.session import AsyncSession
-from app.games.constants import GAME_STATE_KEY_PREFIX
 from app.games.constants import WS_TOKEN_PREFIX
 
 
@@ -72,25 +71,6 @@ def cleanup_room_if_empty(game_id: str) -> None:
         print(f"🗑️ Room {game_id} supprimée (vide)")
 
 
-async def get_game_state_from_redis(
-    redis_conn: AsyncRedis, 
-    game_id: str
-) -> WordSearchState | None:
-    """
-    Récupère l'état du jeu depuis Redis.
-    Retourne None si l'état n'existe pas.
-    """
-    state_key = GAME_STATE_KEY_PREFIX + game_id
-    json_state = await redis_conn.get(state_key)
-    
-    if not json_state:
-        return None
-    
-    # Décoder si bytes
-    if isinstance(json_state, bytes):
-        json_state = json_state.decode("utf-8")
-    
-    return WordSearchState.model_validate_json(json_state)
 
 
 async def send_game_state_to_player(
@@ -103,7 +83,7 @@ async def send_game_state_to_player(
     Envoie l'état actuel du jeu (grille + mots à trouver) au joueur.
     Appelé lors de la connexion initiale du joueur.
     """
-    game_state = await get_game_state_from_redis(redis_conn, game_id)
+    game_state = await room._get_game_state(redis_conn, game_id)
     
     if not game_state:
         await room.send_to_player(player_id, {
@@ -159,33 +139,33 @@ async def websocket_endpoint(
         )
     
 
-    # # 2. Vérification que la partie existe en DB
-    # game_session = await get_game_session(session, game_id)
+    # 2. Vérification que la partie existe en DB
+    game_session = await get_game_session(session, game_id)
 
-    # if not game_session:
-    #     await websocket.close(
-    #         code=status.WS_1008_POLICY_VIOLATION,
-    #         reason="Game session not found",
-    #     )
-    #     return
+    if not game_session:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Game session not found",
+        )
+        return
 
-    # # 3. Vérification que le joueur fait partie de cette partie
-    # if player_id not in (game_session.player1_id, game_session.player2_id):
-    #     await websocket.close(
-    #         code=status.WS_1008_POLICY_VIOLATION,
-    #         reason="Player not in this game",
-    #     )
-    #     return
+    # 3. Vérification que le joueur fait partie de cette partie
+    if player_id not in (game_session.player1_id, game_session.player2_id):
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION,
+            reason="Player not in this game",
+        )
+        return
 
     # 4. Gestion de la salle de jeu (avec accès Redis)
     room = get_or_create_room(game_id,session, redis_conn)
 
-    # # 🎯 4. PROTECTION: Si le joueur est déjà connecté avec un autre socket, refuser
-    # existing_socket = room.get_player_socket(player_id)
-    # if existing_socket is not None:
-    #     print(f"⚠️ [{game_id}] {user.username} déjà connecté, refus de la nouvelle connexion")
-    #     await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Already connected")
-    #     return
+    # 🎯 4. PROTECTION: Si le joueur est déjà connecté avec un autre socket, refuser
+    existing_socket = room.get_player_socket(player_id)
+    if existing_socket is not None:
+        print(f"⚠️ [{game_id}] {user.username} déjà connecté, refus de la nouvelle connexion")
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Already connected")
+        return
 
     # 6. Vérifier si c'est une reconnexion AVANT d'ajouter le joueur
     is_reconnection = room.is_reconnection(player_id)

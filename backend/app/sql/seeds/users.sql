@@ -149,8 +149,4 @@ INSERT INTO "user" (user_id, username, mail, victories, defeats, created_at) VAL
 ('usr-119-aaaa-bbbb-cccc', 'Balanced', 'balanced@test.com', 100, 100, '2025-01-10 09:00:00+00'),
 ('usr-120-aaaa-bbbb-cccc', 'FiftyFifty', 'fifty.fifty@test.com', 75, 75, '2025-02-15 14:00:00+00')
 
-ON CONFLICT (user_id) DO UPDATE SET
-    username = EXCLUDED.username,
-    mail = EXCLUDED.mail,
-    victories = EXCLUDED.victories,
-    defeats = EXCLUDED.defeats;
+ON CONFLICT (user_id) DO NOTHING;

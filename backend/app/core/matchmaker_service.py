@@ -15,6 +15,15 @@ QUEUE_BASE_NAME = "matchmaking:queue:"
 MATCH_NOTIFICATION_TTL = 60  # secondes
 STOP_EVENT = asyncio.Event()
 
+
+async def clear_all_queues(redis_client) -> None:
+    """Vide toutes les files d'attente au démarrage."""
+    for game_name in Games:
+        queue_key = f"{QUEUE_BASE_NAME}{game_name.value}"
+        deleted = await redis_client.delete(queue_key)
+        if deleted:
+            print(f"🧹 File {game_name.value} vidée")
+
 async def try_match_players(
     queue_key: str,
     game_name: Games,
@@ -30,6 +39,8 @@ async def try_match_players(
     if queue_size < 2:
         if queue_size == 1:
             print(f"[{game_name.value}] Un joueur en attente...")
+            liste = await redis_client.lrange(f"{queue_key}",0,-1)
+            print(liste)
         return False
 
     async with redis_client.pipeline(transaction=True) as pipe:
@@ -131,6 +142,9 @@ async def run_matchmaking_consumer() -> None:
     if redis_client is None:
         print("❌ Impossible de démarrer: Redis non disponible")
         return
+    
+    # # 🎯 Nettoyer les files au démarrage
+    # await clear_all_queues(redis_client)
 
     while not STOP_EVENT.is_set():
         #print("matchmaking service running...")

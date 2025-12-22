@@ -211,7 +211,6 @@ class WordSearchEngine:
                 player_b_id=player_b_id,
                 winner_id=winner_id,
                 loser_id=loser_id,
-                final_scores=final_scores,
                 final_state=final_state,
             )
         except Exception as e:
@@ -254,7 +253,6 @@ class WordSearchEngine:
         player_b_id: str,
         winner_id: str | None,
         loser_id: str | None,
-        final_scores: Dict[str, int],
         final_state: WordSearchState,
     ) -> None:
         """Persiste les résultats en base de données."""

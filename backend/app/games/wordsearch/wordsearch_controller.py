@@ -79,7 +79,8 @@ class WordSearchController:
             today = datetime.date.today().isoformat()
             await redis_client.incr(f"stats:games_count:{today}")
             await redis_client.expire(f"stats:games_count:{today}", 172800)  # 48 heures
-        except Exception:
+        except Exception as e:
+            print("une erreur est survenue" ,e)
             await db_session.rollback()
             return None
 

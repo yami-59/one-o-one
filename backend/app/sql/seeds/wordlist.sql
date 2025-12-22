@@ -330,4 +330,4 @@ INSERT INTO wordlist (theme, words) VALUES
     "hierophante","scribe","vizir","nome","delta","cataracte","inondation","nilometre","shadouf","chadouf"
 ]')
 
-ON CONFLICT (theme) DO UPDATE SET words = EXCLUDED.words;
+ON CONFLICT (theme) DO NOTHING;

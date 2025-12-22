@@ -48,6 +48,7 @@ async def join_queue(
     redis_conn: RedisDep,
 ):
     """Permet à un joueur de rejoindre la file d'attente."""
+    print("api appellé")
     player_id = get_current_user_id(token)
     queue_key = _get_queue_key(request_data.game_name)
 

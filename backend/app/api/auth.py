@@ -87,7 +87,7 @@ async def refresh_token(
     
     # 2. Vérification de l'existence de l'utilisateur en DB
     statement = select(User).where(User.user_id == user_id)
-    user = (await session.exec(statement)).first()
+    user :User= (await session.exec(statement)).first()
 
     if not user:
         raise HTTPException(
@@ -103,7 +103,7 @@ async def refresh_token(
         access_token=new_access_token,
         user_info={
             "user_id":user_id,
-            "username":user.username
+            "username":user.username,
         }
         
     )

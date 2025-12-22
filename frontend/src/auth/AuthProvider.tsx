@@ -16,7 +16,6 @@ import Loader from '../components/Loader';
 
 const API_URL = import.meta.env.VITE_API_BASE_URL;
 const TOKEN_KEY = 'access_token';
-const USER_INFO_KEY = 'user_json';
 
 // =============================================================================
 // API FUNCTIONS
@@ -61,18 +60,7 @@ async function fetchAuth(endpoint: string, access_token?: string) {
     };
 }
 
-// =============================================================================
-// HELPER: Parse user info from localStorage
-// =============================================================================
 
-function parseUserInfo(userInfoString: string | null): UserProps | null {
-    if (!userInfoString) return null;
-    try {
-        return JSON.parse(userInfoString);
-    } catch {
-        return null;
-    }
-}
 
 // =============================================================================
 // PROVIDER COMPONENT
@@ -84,27 +72,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     // ─────────────────────────────────────────────────────────────────────────
 
     const [token, setToken] = useState<string | null>(() => localStorage.getItem(TOKEN_KEY));
-    const [userInfo, setUserInfo] = useState<UserProps | null>(() =>
-        parseUserInfo(localStorage.getItem(USER_INFO_KEY))
-    );
+    const [userInfo,setUserInfo] = useState<UserProps|null>(null)
+
     const [isLoading, setIsLoading] = useState(true);
 
     // ─────────────────────────────────────────────────────────────────────────
     // CALLBACKS
     // ─────────────────────────────────────────────────────────────────────────
 
-    const saveAuthData = useCallback((newToken: string, newUserInfo: UserProps) => {
+    const saveToken = useCallback((newToken: string) => {
         localStorage.setItem(TOKEN_KEY, newToken);
-        localStorage.setItem(USER_INFO_KEY, JSON.stringify(newUserInfo));
         setToken(newToken);
-        setUserInfo(newUserInfo);
     }, []);
 
-    const clearAuthData = useCallback(() => {
+    const clearToken = useCallback(() => {
         localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(USER_INFO_KEY);
         setToken(null);
-        setUserInfo(null);
     }, []);
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -114,30 +97,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const loginAsGuest = useCallback(async () => {
         try {
             const data = await fetchAuth('/guest/login');
-            saveAuthData(data.token, data.userInfo);
+            saveToken(data.token);
+            setUserInfo(data.userInfo)
             console.log('✅ Connexion invité réussie');
         } catch (error) {
             console.error('❌ Échec de la connexion invité:', error);
             throw error;
         }
-    }, [saveAuthData]);
+    }, [saveToken]);
 
     const logout = useCallback(() => {
-        clearAuthData();
+        clearToken();
         console.log('✅ Déconnexion réussie');
-    }, [clearAuthData]);
+    }, [clearToken]);
 
     const refreshToken = useCallback(async (currentToken: string) => {
         try {
             const data = await fetchAuth('/refresh', currentToken);
-            saveAuthData(data.token, data.userInfo);
+            saveToken(data.token);
+            setUserInfo(data.userInfo)
             console.log('✅ Token rafraîchi');
         } catch (error) {
             console.error('❌ Échec du rafraîchissement du token:', error);
             // Token invalide → déconnecter l'utilisateur
-            clearAuthData();
+            clearToken();
         }
-    }, [saveAuthData, clearAuthData]);
+    }, [saveToken, clearToken]);
 
     // ─────────────────────────────────────────────────────────────────────────
     // EFFECT: Initial load & token refresh

@@ -6,7 +6,7 @@ from sqlmodel import select, func, desc
 
 from app.core.db import SessionDep
 from app.models.tables import User
-from app.auth.lib import TokenDep, get_current_user_id
+from app.lib.auth import TokenDep, get_current_user_id
 from app.core.redis import RedisDep
 
 router = APIRouter(tags=["statistiques"])
@@ -74,7 +74,12 @@ async def get_my_stats(token: TokenDep, session: SessionDep):
     Récupère les statistiques personnelles du joueur et calcule son rang mondial.
     """
     user_id = get_current_user_id(token)
-    user = await session.get(User, user_id)
+
+     # 2. Vérification de l'existence de l'utilisateur en DB
+    statement = select(User).where(User.user_id == user_id)
+    user : User = (await session.exec(statement)).first()
+
+
     
     if not user:
         raise HTTPException(status_code=404, detail="Utilisateur non trouvé")
