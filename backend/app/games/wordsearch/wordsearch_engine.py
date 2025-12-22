@@ -158,7 +158,7 @@ class WordSearchEngine:
         # 4. Préparation pour le Frontend (indices pour le vert)
         selected_obj.word = word
         selected_obj.found_by = player_id
-        selected_obj.indices = [{"row": selected_obj.start_index.row + i*dr, "col": selected_obj.start_index.col + i*dc} for i in range(steps + 1)]
+        # selected_obj.indices = [{"row": selected_obj.start_index.row + i*dr, "col": selected_obj.start_index.col + i*dc} for i in range(steps + 1)]
 
         state.words_found.append(selected_obj)
         await self._save_game_state(state)
@@ -181,7 +181,8 @@ class WordSearchEngine:
             final_state = await self._get_game_state()
         except ValueError:
             return {"status": "error", "detail": "État de jeu non trouvé."}
-
+        final_state.game_duration = duration
+        await self._save_game_state(final_state)
         final_scores = final_state.realtime_score
         player_ids = list(final_scores.keys())
 

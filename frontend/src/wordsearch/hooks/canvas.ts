@@ -65,7 +65,7 @@ const getPlayerColor = (foundById: string|undefined, myPlayerId?: string): strin
 // =============================================================================
 
 export const useCanvasDrawing = (
-    playSound:((type: SoundType) => void) ,
+    playSound:((type: SoundType) => void) |undefined= undefined,
     setGameData: React.Dispatch<React.SetStateAction<unknown>>,
     gridData: string[][],
     solutionsFound: WordSolution[],
@@ -159,18 +159,18 @@ export const useCanvasDrawing = (
 
         const currentWs = wsRef.current;
         if (!currentWs) {
-            // console.log(`❌ [Canvas ${playerId?.slice(-8)}] wsRef.current est NULL`);
+            console.log(`❌ [Canvas ${playerId?.slice(-8)}] wsRef.current est NULL`);
             return;
         }
         
         if (currentWs.readyState !== WebSocket.OPEN) {
-            // console.log(`❌ [Canvas ${playerId?.slice(-8)}] readyState=${currentWs.readyState} (pas OPEN=1)`);
+            console.log(`❌ [Canvas ${playerId?.slice(-8)}] readyState=${currentWs.readyState} (pas OPEN=1)`);
             return;
         }
 
         try {
             currentWs.send(JSON.stringify(message));
-            // console.log(`✅ [Canvas ${playerId?.slice(-8)}] send() exécuté`);
+            console.log(`✅ [Canvas ${playerId?.slice(-8)}] send() exécuté`);
         } catch (error) {
             console.error(`❌ [Canvas ${playerId?.slice(-8)}] Erreur send():`, error);
         }
@@ -228,9 +228,12 @@ export const useCanvasDrawing = (
         []
     );
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // RENDER EFFECT
-    // ─────────────────────────────────────────────────────────────────────────
+    useEffect(() => {
+        wsRef.current = ws;
+        if (ws) {
+            console.log(`✅ [Canvas] WebSocket ref mis à jour, readyState: ${ws.readyState}`);
+        }
+    }, [ws]);
     
     // ─────────────────────────────────────────────────────────────────────────
     // RENDER EFFECT
@@ -419,7 +422,7 @@ export const useCanvasDrawing = (
                         end_index: currentIndexes.end_index,
                     },
                 });
-                // console.log(`📤 Word submitted: "${myWord}"`);
+                console.log(`📤 Word submitted: "${myWord}"`);
             } else {
                 console.log(`⚠️ Word already found: "${myWord}"`);
             }

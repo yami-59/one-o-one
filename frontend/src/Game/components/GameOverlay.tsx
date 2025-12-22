@@ -183,10 +183,10 @@ export default function GameOverlay({
 
         // 2. Calcul de la durée (MM:SS)
         // Note: Le backend renvoie souvent 'duration' en secondes dans finishedData
-        const totalSeconds = finishedData.duration ?? finishedData.game_data?.game_duration ?? 0;
+        const totalSeconds = finishedData.game_data?.game_duration ?? finishedData.duration ?? 0;
         const mins = Math.floor(totalSeconds / 60);
         const secs = totalSeconds % 60;
-        const durationStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        const durationStr = `${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
 
         return {
             points: myScore,
