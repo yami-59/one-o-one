@@ -18,6 +18,7 @@ from app.api.websocket import (
     router as websocket_router,
 )  # 🚀 Routeur Matchmaking
 from app.core.matchmaker_service import STOP_EVENT
+from app.api.stats import router as stats_router
 
 
 
@@ -78,6 +79,8 @@ app.add_middleware(
 app.include_router(matchmaking_router, prefix="/api/v1", tags=["matchmaking"])
 app.include_router(guest_router, prefix="/api/v1", tags=["create new guest Account"])
 app.include_router(websocket_router, prefix="/api/v1", tags=["websocket"])
+# Route pour les statistiques
+app.include_router(stats_router, prefix="/api/v1", tags=["statistics"])
 
 
 @app.get("/")

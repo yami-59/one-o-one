@@ -54,6 +54,7 @@ export interface WordSearchTableProps extends CanvaDrawingProps {
 
 export interface GameGridProps extends CanvaDrawingProps {
     gridData: string[][];
+    opponentSelection?: GridIndex[];
 }
 
 
@@ -70,4 +71,7 @@ export interface WordSearchData extends GameBaseData {
 
   // Mots trouvés par joueur
   words_found:  WordSolution[]; 
+
+    // Sélection actuelle de l'adversaire (pour affichage en temps réel)
+    opponent_selection?: GridIndex[];
 }

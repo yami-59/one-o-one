@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { Crown, Frown, Handshake, Flag, Trophy, Home, Play, Sparkles } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
+import { Crown, Frown, Handshake, Flag, Trophy, Home, Play, Sparkles, Zap, Clock, Target } from 'lucide-react';
 import { type GameFinishedMessage } from '../types/GameInterface';
 import type { SoundType } from '../types/GameInterface';
 import  { type MatchMakingProps,useMatchmaking } from '../hooks/useMatchMaking';
@@ -30,6 +30,7 @@ const determineGameResult = (
     myPlayerId: string,
 ): GameResult => {
     const { reason, winner_id, abandon_player_id } = finishedData;
+    
 
     // Cas égalité
     if (!winner_id) {
@@ -165,6 +166,34 @@ export default function GameOverlay({
     
     const result = determineGameResult(finishedData, myId || '');
     const config = resultConfig[result];
+    // --- CALCUL DES STATS RÉELLES ---
+    const stats = useMemo(() => {
+        // Extraction des données brutes depuis l'état final
+        console.log('FinishedData duration:', finishedData.duration);
+
+        const dataAny = finishedData as any;
+        const gameData = dataAny.game_data || {};
+        const wordsToFind = gameData.words_to_find || [];
+        const wordsFound = gameData.words_found || [];
+
+        // 1. Calcul de la précision
+        const foundByMe = wordsFound.filter((w: any) => w.found_by === myId).length;
+        const totalWords = wordsToFind.length || 1;
+        const precision = Math.round((foundByMe / totalWords) * 100);
+
+        // 2. Calcul de la durée (MM:SS)
+        // Note: Le backend renvoie souvent 'duration' en secondes dans finishedData
+        const totalSeconds = finishedData.duration ?? finishedData.game_data?.game_duration ?? 0;
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        const durationStr = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+
+        return {
+            points: myScore,
+            duration: durationStr,
+            precision: precision
+        };
+    }, [finishedData, myId, myScore]);
 
     useEffect(() => {
         console.log(result);
@@ -260,20 +289,25 @@ export default function GameOverlay({
                 </div>
 
                 {/* Stats (optional) */}
-                <div className="grid grid-cols-3 gap-3 mb-8">
-                    <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                        <p className="text-xs text-gray-400 mb-1">Points gagnés</p>
-                        <p className="text-lg font-bold text-green-400">+125 XP</p>
-                    </div>
-                    <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                        <p className="text-xs text-gray-400 mb-1">Durée</p>
-                        <p className="text-lg font-bold text-purple-400">2:34</p>
-                    </div>
-                    <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-3 text-center">
-                        <p className="text-xs text-gray-400 mb-1">Précision</p>
-                        <p className="text-lg font-bold text-blue-400">94%</p>
-                    </div>
+                 <div className="grid grid-cols-3 gap-3 mb-8">
+                <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-3 text-center transition-all hover:bg-white/10">
+                    <Zap size={14} className="text-yellow-500 mx-auto mb-1" />
+                    <p className="text-[10px] text-gray-400 mb-1 uppercase tracking-tighter">Points</p>
+                    <p className="text-lg font-bold text-green-400">+{stats.points}</p>
                 </div>
+                
+                <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-3 text-center transition-all hover:bg-white/10">
+                    <Clock size={14} className="text-purple-400 mx-auto mb-1" />
+                    <p className="text-[10px] text-gray-400 mb-1 uppercase tracking-tighter">Durée</p>
+                    <p className="text-lg font-bold text-purple-400">{stats.duration}</p>
+                </div>
+                
+                <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl p-3 text-center transition-all hover:bg-white/10">
+                    <Target size={14} className="text-blue-400 mx-auto mb-1" />
+                    <p className="text-[10px] text-gray-400 mb-1 uppercase tracking-tighter">Précision</p>
+                    <p className="text-lg font-bold text-blue-400">{stats.precision}%</p>
+                </div>
+            </div>
 
                 {/* Buttons */}
                 <div className="flex flex-col gap-3">

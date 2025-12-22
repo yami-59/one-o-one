@@ -17,8 +17,8 @@ export function WordSearchScreen({ playSound } : GameComponentProps) {
     // Cast des données spécifiques au jeu
     const data = game.gameData as WordSearchData | null;
 
-  
-
+    // Extraire la selection de l'adversaire pour l'affichage en temps reel
+    
 
     // Extraire les solutions trouvées
     const solutionsFound: WordSolution[] = useMemo(() => {

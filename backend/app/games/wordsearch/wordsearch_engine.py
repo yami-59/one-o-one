@@ -34,6 +34,15 @@ class WordSearchEngine:
                 raise ValueError(f"Solutions non trouvées pour {self._game_id}.")
             self._solution_data_cache = WordSearchSolutionData.model_validate_json(json_data)
         return self._solution_data_cache
+    
+    def _get_points(self, dr: int, dc: int, length: int) -> int:
+        """Calcule les points : direction + bonus longueur."""
+        # Points par direction
+        dir_map = {(0,1):5, (0,-1):8, (1,0):10, (-1,0):12, (1,1):15, (1,-1):18, (-1,1):18, (-1,-1):20}
+        base = dir_map.get((dr, dc), 5)
+        # 2. Bonus longueur (+2 par lettre au dessus de 5)
+        bonus = max(0, (length - 5) * 2)
+        return base + bonus
 
     
 
@@ -109,7 +118,7 @@ class WordSearchEngine:
     # VALIDATION ET SCORING
     # =========================================================================
 
-    async def check_all_solutions_found(self):
+    async def check_all_solutions_found(self, duration : int = 300):
         print("appelle de check_all_solution_found dans engine")
         """Vérifie si toutes les solutions ont été trouvées."""
         state = await self._get_game_state()
@@ -120,125 +129,45 @@ class WordSearchEngine:
         print(f"{total_found} solution(s) trouvée(s)")
         
         if total_found >= len(solution_data.solutions):
-            return await self.finalize_game(reason="completed")
+            return await self.finalize_game(reason="completed" , duration=duration)
         
         return None
 
-
-    async def validate_selection(
-        self,
-        player_id: str,
-        selected_obj: WordSolution,
-    ) -> Dict[str, Any]:
-        """Vérifie si le mot sélectionné est valide et met à jour l'état."""
-        state = await self._get_game_state()
-        solution_data = await self._get_solution_data()  # ← Utilise le cache
-
-        # 1. Reconstruction et vérification anti-triche
-        try:
-            reconstructed_word = self.reconstruct_word(state.grid_data, selected_obj)
-        except ValueError as e:
-            return {"success": False, "reason": str(e)}
-
-        if reconstructed_word != selected_obj.word.upper():
-            return {
-                "success": False,
-                "reason": "La sélection ne correspond pas au mot soumis.",
-            }
-
-        # 2. Vérification que le mot est une solution
-        is_valid_solution = any(
-            selected_obj.word.upper() == sol.word.upper()
-            for sol in solution_data.solutions  # ← Utilise solution_data
-        )
-
-        if not is_valid_solution:
-            return {"success": False, "reason": "Mot non valide dans cette partie."}
-
-        # 3. Vérification que le mot n'a pas déjà été trouvé
-        already_found = any(
-            selected_obj.word.upper() == solution.word.upper()
-            for solution in state.words_found
-        )
-
-        if already_found:
-            return {"success": False, "reason": "Mot déjà trouvé."}
-
-        # 4. Mise à jour atomique
-        current_score = state.realtime_score.get(player_id, 0)
-        new_score = current_score + self.POINTS_PER_WORD
-        state.realtime_score[player_id] = new_score
-
-        selected_obj.found_by = player_id
-
-        state.words_found.append(selected_obj)
-
-        await self._save_game_state(state)
-
-        return {
-            "success": True,
-            "new_solution": selected_obj.model_dump(),
-            "score_update": self.POINTS_PER_WORD,
-            "new_score": new_score,
-        }
-    async def validate_selection(
-    self,
-    player_id: str,
-    selected_obj: WordSolution,
-    ) -> Dict[str, Any]:
-        """Vérifie si le mot sélectionné est valide et met à jour l'état."""
+    async def validate_selection(self, player_id: str, selected_obj: WordSolution) -> Dict[str, Any]:
         state = await self._get_game_state()
         solution_data = await self._get_solution_data()
 
-        # 1. Reconstruction et vérification anti-triche
+        # 1. Analyse direction et reconstruction
         try:
-            reconstructed_word = self.reconstruct_word(state.grid_data, selected_obj)
+            dr, dc, steps = self._calculate_direction(selected_obj.start_index, selected_obj.end_index)
+            word = self.reconstruct_word(state.grid_data, selected_obj)
         except ValueError as e:
             return {"success": False, "reason": str(e)}
 
-        if reconstructed_word != selected_obj.word.upper():
-            return {
-                "success": False,
-                "reason": "La sélection ne correspond pas au mot soumis.",
-            }
+        # 2. Vérifications mot correct et non trouvé
+        if not any(word == sol.word.upper() for sol in solution_data.solutions):
+            return {"success": False, "reason": "Mot incorrect"}
+        if any(word == found.word.upper() for found in state.words_found):
+            return {"success": False, "reason": "Déjà trouvé"}
 
-        # 2. Vérification que le mot est une solution
-        is_valid_solution = any(
-            selected_obj.word.upper() == sol.word.upper()
-            for sol in solution_data.solutions
-        )
-
-        if not is_valid_solution:
-            return {"success": False, "reason": "Mot non valide dans cette partie."}
-
-        # 3. 🎯 FIX: Vérification que le mot n'a pas déjà été trouvé
-        already_found = any(
-            selected_obj.word.upper() == solution.word.upper()
-            for solution in state.words_found
-        )
-
-        if already_found:
-            return {"success": False, "reason": "Mot déjà trouvé."}
-
-        # 4. Mise à jour atomique
-        current_score = state.realtime_score.get(player_id, 0)
-        new_score = current_score + self.POINTS_PER_WORD
+        # 3. Calcul des points et mise à jour score
+        pts = self._get_points(dr, dc, len(word))
+        new_score = state.realtime_score.get(player_id, 0) + pts
         state.realtime_score[player_id] = new_score
 
+        # 4. Préparation pour le Frontend (indices pour le vert)
+        selected_obj.word = word
         selected_obj.found_by = player_id
+        selected_obj.indices = [{"row": selected_obj.start_index.row + i*dr, "col": selected_obj.start_index.col + i*dc} for i in range(steps + 1)]
 
         state.words_found.append(selected_obj)
-
         await self._save_game_state(state)
 
-        return {
-            "success": True,
-            "new_solution": selected_obj.model_dump(),
-            "score_update": self.POINTS_PER_WORD,
-            "new_score": new_score,
-        }
-    
-    async def finalize_game(self, abandon_player_id: str | None = None,reason = 'timeout') -> Dict[str, Any]:
+        return {"success": True, "new_solution": selected_obj.model_dump(), "score_update": pts, "new_score": new_score}
+
+
+
+    async def finalize_game(self, abandon_player_id: str | None = None,reason = 'timeout', duration: int = 300) -> Dict[str, Any]:
 
         print(f"appelle de finalize game reason : {reason}")
         """
@@ -275,18 +204,18 @@ class WordSearchEngine:
             )
 
         # # 3. Transaction DB
-        # try:
-        #     await self._persist_results(
-        #         player_a_id=player_a_id,
-        #         player_b_id=player_b_id,
-        #         winner_id=winner_id,
-        #         loser_id=loser_id,
-        #         final_scores=final_scores,
-        #         final_state=final_state,
-        #     )
-        # except Exception as e:
-        #     await self._db_session.rollback()
-        #     return {"status": "error", "detail": f"Échec DB: {e}"}
+        try:
+            await self._persist_results(
+                player_a_id=player_a_id,
+                player_b_id=player_b_id,
+                winner_id=winner_id,
+                loser_id=loser_id,
+                final_scores=final_scores,
+                final_state=final_state,
+            )
+        except Exception as e:
+            await self._db_session.rollback()
+            return {"status": "error", "detail": f"Échec DB: {e}"}
 
         # 4. Nettoyage Redis
         await self._redis.delete(f"{GAME_STATE_KEY_PREFIX}{self._game_id}")
@@ -296,6 +225,8 @@ class WordSearchEngine:
             "winner_id": winner_id,
             "loser_id": loser_id,
             "scores": {player_a_id: score_a, player_b_id: score_b},
+            "game_data": final_state.model_dump(),
+            "duration": duration,
             "reason": reason,
         }
 

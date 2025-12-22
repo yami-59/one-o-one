@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 from typing import List,Dict,Any
 
 from pydantic import EmailStr
+from app.games.constants import GameStatus
 from sqlalchemy import DateTime
 from sqlmodel import Field, SQLModel
 from sqlalchemy.dialects.postgresql import JSON # Pour la clarté
@@ -25,6 +26,7 @@ class GameSession(SQLModel, table=True):
     )
 
     winner_id: str | None = Field(default=None)
+    status : str = Field(default = GameStatus.GAME_INITIALIZED.value, index=True)
 
 
 class User(SQLModel, table=True):

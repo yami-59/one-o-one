@@ -58,6 +58,7 @@ export interface GameBaseData {
 
 
 export interface GameFinishedMessage {
+    game_data: any;
     type: 'game_finished';
     reason: 'timeout' | 'abandon' | 'completed';
     winner_id: string | null;
@@ -66,4 +67,5 @@ export interface GameFinishedMessage {
     scores: Record<string, number>;
     abandon_player_id?: string;
     abandon_username?: string;
+    duration: number;
 }
