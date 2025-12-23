@@ -23,10 +23,19 @@ const TOKEN_KEY = 'access_token';
 // API FUNCTIONS
 // =============================================================================
 // ✅ new：payload peut choisir，ne peut pas etre {}
+class ApiError extends Error {
+  status: number;
+  detail: unknown;
+  constructor(status: number, message: string, detail?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
 async function fetchAuth(endpoint: string, payload?: unknown, access_token?: string) {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (access_token) headers.Authorization = `Bearer ${access_token}`;
 
   const response = await fetch(`${API_URL}${endpoint}`, {
@@ -37,19 +46,28 @@ async function fetchAuth(endpoint: string, payload?: unknown, access_token?: str
 
   if (!response.ok) {
     let message = `HTTP error ${response.status}`;
+    let detail: any = null;
+
     try {
       const err = await response.json();
-      if (typeof err.detail === 'string') message = err.detail;
-      else if (Array.isArray(err.detail) && err.detail[0]?.msg) message = err.detail[0].msg;
+      detail = err?.detail;
+
+      if (typeof err?.detail === 'string') {
+        message = err.detail;
+      } else if (Array.isArray(err?.detail) && err.detail[0]?.msg) {
+        message = err.detail[0].msg;
+      }
     } catch {
       // ignore
     }
-    throw new Error(message);
+
+    throw new ApiError(response.status, message, detail);
   }
 
   const data: AuthData = await response.json();
   return { token: data.access_token, userInfo: data.user_info };
 }
+
 
 
 // =============================================================================

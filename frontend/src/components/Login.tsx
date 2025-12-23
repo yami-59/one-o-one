@@ -43,6 +43,8 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
     const [password, setPassword] = useState('');
     const [username, setUsername] = useState('');
 
+    const [showPassword, setShowPassword] = useState(false);
+
     // ─────────────────────────────────────────────────────────────────────────
     // HANDLERS
     // ─────────────────────────────────────────────────────────────────────────
@@ -111,21 +113,68 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
         }
         };
 
+    
+
         const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
         setError(null);
 
+        const u = username.trim();
+        const m = email.trim();
+
+        // ✅ 前端先擋：username >= 3（避免一直打後端 422）
+        if (u.length < 3) {
+            setError("Le nom d'utilisateur doit contenir au moins 3 caractères.");
+            return;
+        }
+
+        // ✅ email 格式（type="email" 通常已擋，但這裡再保險一次）
+        const emailOk = /^\S+@\S+\.\S+$/.test(m);
+        if (!emailOk) {
+            setError("Veuillez saisir une adresse email valide.");
+            return;
+        }
+
+        setIsLoading(true);
+
         try {
-            await register({ username, mail: email, password }); // ✅ use context register
+            await register({ username: u, mail: m, password });
             onSuccess?.();
-        } catch (err) {
-            setError("Erreur lors de l'inscription.");
-            console.log(err);
+        } catch (err: any) {
+            // 1) 先把後端回傳的 detail 轉成文字
+            const detail = err?.detail;
+            let text = (err?.message ?? '').toString();
+
+            if (typeof detail === 'string') {
+            text = detail;
+            } else if (Array.isArray(detail)) {
+            // FastAPI/Pydantic validation errors
+            const msgs = detail.map((x) => x?.msg).filter(Boolean);
+            if (msgs.length) text = msgs.join(' | ');
+            }
+
+            const lower = text.toLowerCase();
+
+            // 2) 映射成你要顯示的法文提示
+            if (lower.includes('email already registered') || lower.includes('email already exists')) {
+            setError("Cet email est déjà utilisé.");
+            } else if (lower.includes('username already') || lower.includes('user already exists') || lower.includes('unique constraint')) {
+            setError("Ce nom d'utilisateur est déjà utilisé.");
+            } else if (lower.includes('at least 3') || lower.includes('string_too_short') || lower.includes('min_length')) {
+            setError("Le nom d'utilisateur doit contenir au moins 3 caractères.");
+            } else if (lower.includes('valid email') || lower.includes('value is not a valid email')) {
+            setError("Veuillez saisir une adresse email valide.");
+            } else {
+            setError(text || "Erreur lors de l'inscription.");
+            }
+
+            console.log('REGISTER ERROR:', err);
         } finally {
             setIsLoading(false);
         }
         };
+
+
 
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -280,23 +329,36 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
 
                     {/* Password */}
                     <div>
-                        <label className="block text-white text-sm font-bold mb-2">
-                            Mot de passe
-                        </label>
-                        <div className="relative">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-linear-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/30">
-                                <Lock size={18} className="text-white" />
-                            </div>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="••••••••"
-                                required
-                                className="w-full backdrop-blur-xl bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-xl py-4 pl-16 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
-                            />
+                    <label className="block text-white text-sm font-bold mb-2">
+                        Mot de passe
+                    </label>
+
+                    <div className="relative">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-linear-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/30">
+                        <Lock size={18} className="text-white" />
                         </div>
+
+                        <input
+                        type={showPassword ? 'text' : 'password'}   // ✅ 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        className="w-full backdrop-blur-xl bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-xl py-4 pl-16 pr-14 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
+                        />
+
+                        {/* 👁  */}
+                        <button
+                        type="button"                               // ✅
+                        onClick={() => setShowPassword((v) => !v)}  // ✅ 
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                        aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                        >
+                        {showPassword ? '🙈' : '👁'}
+                        </button>
                     </div>
+                    </div>
+
 
                     {/* Submit button */}
                     <button
@@ -345,6 +407,7 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
                                 onChange={(e) => setUsername(e.target.value)}
                                 placeholder="MonPseudo"
                                 required
+                                minLength={3} // ✅ new：min plus 3 
                                 className="w-full backdrop-blur-xl bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-xl py-4 pl-16 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
                             />
                         </div>
@@ -372,27 +435,41 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
 
                     {/* Password */}
                     <div>
-                        <label className="block text-white text-sm font-bold mb-2">
-                            Mot de passe
-                        </label>
-                        <div className="relative">
-                            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-linear-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/30">
-                                <Lock size={18} className="text-white" />
-                            </div>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                placeholder="••••••••"
-                                required
-                                minLength={6}
-                                className="w-full backdrop-blur-xl bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-xl py-4 pl-16 pr-4 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
-                            />
+                    <label className="block text-white text-sm font-bold mb-2">
+                        Mot de passe
+                    </label>
+
+                    <div className="relative">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-linear-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center shadow-lg shadow-purple-500/30">
+                        <Lock size={18} className="text-white" />
                         </div>
-                        <p className="text-xs text-gray-400 mt-2">
-                            Minimum 6 caractères
-                        </p>
+
+                        <input
+                        type={showPassword ? 'text' : 'password'}   // ✅ 
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="••••••••"
+                        required
+                        minLength={6}
+                        className="w-full backdrop-blur-xl bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-xl py-4 pl-16 pr-14 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/20 transition-all"
+                        />
+
+                        {/* 👁  */}
+                        <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-white transition-colors"
+                        aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                        >
+                        {showPassword ? '🙈' : '👁'}
+                        </button>
                     </div>
+
+                    <p className="text-xs text-gray-400 mt-2">
+                        Minimum 6 caractères
+                    </p>
+                    </div>
+
 
                     {/* Submit button */}
                     <button
