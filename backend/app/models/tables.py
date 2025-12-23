@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from typing import List,Dict,Any
+from typing import Optional
 
 from pydantic import EmailStr
 from app.games.constants import GameStatus
@@ -34,6 +35,9 @@ class User(SQLModel, table=True):
     username: str = Field(index=True, unique=True)
     #  Le champ email peut être NULL, mais s'il est fourni, il doit être unique.
     mail: EmailStr | None = Field(default=None, unique=True)
+
+    password_hash: Optional[str] = Field(default=None, nullable=True)# peut être empty
+
     victories: int = Field(default=0)
     defeats: int = Field(default=0)
     created_at: datetime = Field(
