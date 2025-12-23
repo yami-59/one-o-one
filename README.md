@@ -3,27 +3,29 @@
 > Une plateforme de jeux compétitifs en temps réel.
 
 ## 🚀 Installation & Lancement rapide
+
+### 1. Prérequis
+- Docker installé
+- Docker Compose installé
+
+### 2. Démarrer le projet
+
+Cloner le dépôt :
 ```bash
-1. Prérequis
-  Docker installé
-  Docker Compose installé
-
-2. Démarrer le projet
-  Cloner le dépôt
-  git clone https://github.com/yami-59/one-o-one.git
-  cd one-o-one
-
-3. Lancer tous les services
-  docker-compose up --build
-
+git clone https://github.com/yami-59/one-o-one.git
+cd one-o-one
+```
+###3. Lancer tous les services
+```bash
+docker-compose up --build
+```
 4. Ouvrir dans le navigateur
-  http://localhost:8080/lobby
+http://localhost:8080/lobby
 
 5. Arrêter le projet
-  docker-compose down
-
----
-
+ ```bash
+docker-compose down
+```
 
 ## 🎯 Le Cœur de Produit (MVP)
 
@@ -74,6 +76,7 @@ Pendant la partie, les joueurs peuvent désormais communiquer en direct via une 
 * **Conteneurisation :** Docker & Docker Compose.
 
 ---
+
 
 
 
