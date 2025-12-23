@@ -18,6 +18,8 @@ export interface UseCanvasDrawingReturn {
     isDrawing: boolean;
     myWord: string;
     opponentWord: string;
+    chatMsgs: { sender: string; content: string; player_id?: string }[];
+    sendChatMessage: (content: string) => void;
 }
 
 // =============================================================================
@@ -88,6 +90,7 @@ export const useCanvasDrawing = (
     // 🎯 REF POUR LE WEBSOCKET - Toujours à jour
     const wsRef = useRef<WebSocket | null>(ws);
 
+    const [chatMsgs, setChatMsgs] = useState<{ sender: string; content: string; player_id?: string }[]>([]);
 
     // 🎯 DEBUG CRITIQUE: Log à chaque appel du hook
     // console.log(`🎨 [Canvas ${playerId?.slice(-8)}] Hook appelé avec ws:`, {
@@ -289,6 +292,10 @@ export const useCanvasDrawing = (
                 const data = JSON.parse(event.data);
 
                 switch (data.type) {
+                    case 'chat_message':
+                            setChatMsgs(prev => [...prev, data]);
+                            break;
+
                     case GameMessages.SELECTION_UPDATE:
                         if (data.position) {
                             setOpponentPosition(data.position);
@@ -454,6 +461,8 @@ export const useCanvasDrawing = (
         isDrawing,
         myWord,
         opponentWord,
+        chatMsgs,
+        sendChatMessage: (content: string) => sendImmediate({type:'chat',content})
     };
 };
 
