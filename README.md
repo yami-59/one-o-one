@@ -15,14 +15,14 @@ Cloner le dépôt :
 git clone https://github.com/yami-59/one-o-one.git
 cd one-o-one
 ```
-###3. Lancer tous les services
+### 3. Lancer tous les services
 ```bash
 docker-compose up --build
 ```
-4. Ouvrir dans le navigateur
+### 4. Ouvrir dans le navigateur
 http://localhost:8080/lobby
 
-5. Arrêter le projet
+### 5. Arrêter le projet
  ```bash
 docker-compose down
 ```
@@ -76,6 +76,7 @@ Pendant la partie, les joueurs peuvent désormais communiquer en direct via une 
 * **Conteneurisation :** Docker & Docker Compose.
 
 ---
+
 
 
 
