@@ -418,6 +418,19 @@ class GameRoom:
 
             
             match message_type:
+                case 'chat':
+                    content = data.get("content")
+                    if content:
+                        username = self.get_username(player_id) or "Guest"
+                        # Broadcast to everyone
+                        await self.broadcast({
+                            "type": "chat_message",
+                            "sender": username,
+                            "content": content,
+                            "player_id": player_id 
+                        })
+                    return
+                
                 case 'abandon' :
 
                     print('abandon reçu ')

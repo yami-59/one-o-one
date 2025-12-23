@@ -8,6 +8,7 @@ import SidePanel from './SidePanel';
 import type { WordSolution, WordSearchData } from '../types';
 import type { GameComponentProps } from '../../Game/types/GameInterface';
 import Loader from '../../components/Loader';
+import { GameChat } from '../../components/GameChat';
 
 export function WordSearchScreen({ playSound } : GameComponentProps) {
     const game = useGame();
@@ -30,7 +31,7 @@ export function WordSearchScreen({ playSound } : GameComponentProps) {
     
 
     // Hook de dessin Canvas
-    const canvasProps = useCanvasDrawing(
+    const {chatMsgs, sendChatMessage, ...canvasProps} = useCanvasDrawing(
         playSound,
         game.setGameData,
         data?.grid_data ?? [],
@@ -64,6 +65,13 @@ export function WordSearchScreen({ playSound } : GameComponentProps) {
                     myPlayerId={game.me.id}
                 />
             </div>
+
+            <div className="mt-4">
+                    <GameChat 
+                        messages={chatMsgs} 
+                        onSend={sendChatMessage} 
+                    />
+                </div>
         </div>
     );
 }

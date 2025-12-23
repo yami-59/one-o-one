@@ -74,6 +74,9 @@ export enum MessageType {
     PLAYER_RECONNECTED = 'player_reconnected',
     OPPONENT_SELECTION = 'opponent_selection',
 
+    CHAT_MESSAGE = 'chat_message',
+
+
     // Erreurs
     ERROR = 'error',
 
@@ -86,6 +89,8 @@ export enum MessageType {
     SELECTION_UPDATE = 'selection_update',
     SELECTION_RESET = 'selection_reset',
     SUBMIT_WORD = 'submit_word',
+
+    CHAT = 'chat',
 
     // Requêtes
     REQUEST_STATE = 'request_state',
@@ -212,6 +217,19 @@ export interface OpponentSelectionMessage extends BaseMessage {
     word_preview: string | null;
 }
 
+export interface ChatMessage extends BaseMessage {
+    type: MessageType.CHAT_MESSAGE; 
+    sender: string;                 
+    content: string;                
+    player_id: string;              
+}
+
+
+export interface ChatSendMessage extends BaseMessage {
+    type: MessageType.CHAT;         
+    content: string;                
+}
+
 export interface PlayerEventMessage extends BaseMessage {
     type:
         | MessageType.PLAYER_JOINED
@@ -227,6 +245,13 @@ export interface ErrorMessage extends BaseMessage {
     code: ErrorCode;
     message: string;
     details?: Record<string, unknown>;
+}
+
+export interface ChatBroadcastMessage extends BaseMessage {
+    type: MessageType.CHAT_MESSAGE;
+    sender: string;
+    content: string;
+    player_id: string;
 }
 
 // =============================================================================
@@ -259,11 +284,16 @@ export interface PingMessage extends BaseMessage {
     timestamp: number;
 }
 
+export interface ChatSendMessage extends BaseMessage {
+    type: MessageType.CHAT;
+    content: string;
+}
 // =============================================================================
 // TYPE UNION - TOUS LES MESSAGES
 // =============================================================================
 
 export type ServerMessage =
+    | ChatBroadcastMessage
     | GameStateMessage
     | WaitingForPlayersMessage
     | StartingCountdownMessage
@@ -278,6 +308,7 @@ export type ServerMessage =
     | ErrorMessage;
 
 export type ClientMessage =
+    | ChatSendMessage
     | PlayerReadyMessage
     | SelectionUpdateMessage
     | SelectionResetMessage
@@ -353,6 +384,9 @@ export const isMessageType = {
     opponentSelection: (msg: ServerMessage): msg is OpponentSelectionMessage =>
         msg.type === MessageType.OPPONENT_SELECTION,
 
+    chatMessage: (msg: ServerMessage): msg is ChatBroadcastMessage =>
+        msg.type === MessageType.CHAT_MESSAGE,
+    
     playerEvent: (msg: ServerMessage): msg is PlayerEventMessage =>
         [
             MessageType.PLAYER_JOINED,

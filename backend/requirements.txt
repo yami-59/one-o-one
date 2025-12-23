@@ -48,7 +48,7 @@ isort
 
 
 # autres 
-codesum
+#codesum
 python-jose
 pylint
 
