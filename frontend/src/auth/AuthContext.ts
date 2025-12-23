@@ -28,6 +28,17 @@ export interface AuthData {
     user_info: UserProps;
 }
 
+// ✅ new：login / register need payload
+export interface LoginPayload {
+  mail: string;
+  password: string;
+}
+export interface RegisterPayload {
+  username: string;
+  mail: string;
+  password: string;
+}
+
 
 
 // Type des valeurs exposées par le contexte
@@ -37,6 +48,11 @@ export interface AuthContextValue {
     isLoading: boolean;
     isAuthenticated: boolean;
     loginAsGuest:() => Promise<void>
+
+    // ✅ new
+    login: (payload: LoginPayload) => Promise<void>;
+    register: (payload: RegisterPayload) => Promise<void>;
+
     logout:() => void
     // Note: Vous ajouteriez ici une fonction logout ou refreshToken
 }
@@ -49,6 +65,11 @@ const initialContextValue: AuthContextValue = {
     isLoading: true,
     isAuthenticated: false,
     loginAsGuest:(): Promise<void> => Promise.resolve(),
+
+    // ✅ new
+    login: async () => {},
+    register: async () => {},
+
     logout :()=>{}
 
 };

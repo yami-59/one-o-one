@@ -26,6 +26,8 @@ from app.api.stats import router as stats_router
 
 
 
+
+
 # --- Lifespan pour la gestion des événements de démarrage/arrêt ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):

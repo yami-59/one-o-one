@@ -7,6 +7,8 @@ import {
     AuthContext,
     type AuthData,
     type UserProps,
+    type LoginPayload,
+    type RegisterPayload,
 } from './AuthContext';
 import Loader from '../components/Loader';
 
@@ -20,46 +22,34 @@ const TOKEN_KEY = 'access_token';
 // =============================================================================
 // API FUNCTIONS
 // =============================================================================
+// ✅ new：payload peut choisir，ne peut pas etre {}
+async function fetchAuth(endpoint: string, payload?: unknown, access_token?: string) {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (access_token) headers.Authorization = `Bearer ${access_token}`;
 
-async function fetchAuth(endpoint: string, access_token?: string) {
-    const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-    };
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(payload ?? {}),
+  });
 
-    if (access_token) {
-        headers.Authorization = `Bearer ${access_token}`;
+  if (!response.ok) {
+    let message = `HTTP error ${response.status}`;
+    try {
+      const err = await response.json();
+      if (typeof err.detail === 'string') message = err.detail;
+      else if (Array.isArray(err.detail) && err.detail[0]?.msg) message = err.detail[0].msg;
+    } catch {
+      // ignore
     }
+    throw new Error(message);
+  }
 
-    const response = await fetch(`${API_URL}${endpoint}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({}),
-    });
-
-    if (!response.ok) {
-        let message = `Erreur HTTP ${response.status}`;
-        try {
-            const err = await response.json();
-            if (typeof err.detail === 'string') {
-                message = err.detail;
-            } else if (Array.isArray(err.detail) && err.detail[0]?.msg) {
-                message = err.detail[0].msg;
-            }
-        } catch {
-            // Ignore JSON parse errors
-        }
-        throw new Error(message);
-    }
-
-    const data: AuthData = await response.json();
-
-
-    return {
-        token: data.access_token,
-        userInfo: data.user_info,
-    };
+  const data: AuthData = await response.json();
+  return { token: data.access_token, userInfo: data.user_info };
 }
-
 
 
 // =============================================================================
@@ -106,6 +96,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     }, [saveToken]);
 
+
+     // ✅ new：login
+    const login = useCallback(
+        async (payload: LoginPayload) => {
+        const data = await fetchAuth('/auth_email/login', payload);
+        saveToken(data.token);
+        setUserInfo(data.userInfo);
+        console.log('✅ Login success');
+        },
+        [saveToken]
+    );
+
+    // ✅ new：register
+    const register = useCallback(
+        async (payload: RegisterPayload) => {
+        const data = await fetchAuth('/auth_email/register', payload);
+        saveToken(data.token);
+        setUserInfo(data.userInfo);
+        console.log('✅ Register success');
+        },
+        [saveToken]
+    );
+
     const logout = useCallback(() => {
         clearToken();
         console.log('✅ Déconnexion réussie');
@@ -113,7 +126,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     const refreshToken = useCallback(async (currentToken: string) => {
         try {
-            const data = await fetchAuth('/refresh', currentToken);
+            // const data = await fetchAuth('/refresh', currentToken);
+            const data = await fetchAuth('/refresh', {}, currentToken);
             saveToken(data.token);
             setUserInfo(data.userInfo)
             console.log('✅ Token rafraîchi');
@@ -155,6 +169,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         isLoading,
         isAuthenticated: !!token && !!userInfo,
         loginAsGuest,
+        login,
+        register,
         logout,
     };
 

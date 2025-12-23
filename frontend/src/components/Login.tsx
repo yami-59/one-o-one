@@ -17,16 +17,18 @@ interface LoginProps {
     isModal?: boolean;
 }
 
-async function login(email: string, password: string) {
-    console.log(email, password);
-}
+
+// async function login(email: string, password: string) {
+//     console.log(email, password);
+// }
 
 // =============================================================================
 // COMPONENT
 // =============================================================================
 
 export default function Login({ onSuccess, onClose, isModal = false }: LoginProps) {
-    const { loginAsGuest } = useAuth();
+    // const { loginAsGuest } = useAuth();
+    const { loginAsGuest, login, register } = useAuth();
 
     // ─────────────────────────────────────────────────────────────────────────
     // STATE
@@ -60,13 +62,46 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
         }
     };
 
-    const handleLogin = async (e: React.FormEvent) => {
+    // const handleLogin = async (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     setIsLoading(true);
+    //     setError(null);
+
+    //     try {
+    //         await login(email, password);
+    //         onSuccess?.();
+    //     } catch (err) {
+    //         setError('Email ou mot de passe incorrect.');
+    //         console.log(err);
+    //     } finally {
+    //         setIsLoading(false);
+    //     }
+    // };
+
+    // const handleRegister = async (e: React.FormEvent) => {
+    //     e.preventDefault();
+    //     setIsLoading(true);
+    //     setError(null);
+
+    //     try {
+    //         // TODO: Implémenter register
+    //         // await register(email, password, username);
+    //         onSuccess?.();
+    //     } catch (err) {
+    //         setError("Erreur lors de l'inscription.");
+    //         console.log(err);
+    //     } finally {
+    //         setIsLoading(false);
+    //     }
+    // };
+
+        const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
         try {
-            await login(email, password);
+            await login({ mail: email, password });   // ✅ use context login
             onSuccess?.();
         } catch (err) {
             setError('Email ou mot de passe incorrect.');
@@ -74,16 +109,15 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
         } finally {
             setIsLoading(false);
         }
-    };
+        };
 
-    const handleRegister = async (e: React.FormEvent) => {
+        const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
         try {
-            // TODO: Implémenter register
-            // await register(email, password, username);
+            await register({ username, mail: email, password }); // ✅ use context register
             onSuccess?.();
         } catch (err) {
             setError("Erreur lors de l'inscription.");
@@ -91,7 +125,8 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
         } finally {
             setIsLoading(false);
         }
-    };
+        };
+
 
     // ─────────────────────────────────────────────────────────────────────────
     // RENDER HELPERS
@@ -193,7 +228,7 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
 
                     {/* Bouton connexion avec compte */}
                     <button
-                        disabled
+                        disabled={isLoading}
                         onClick={() => setMode('login')}
                         className="group w-full backdrop-blur-xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white font-bold py-4 px-6 rounded-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     >
@@ -361,7 +396,6 @@ export default function Login({ onSuccess, onClose, isModal = false }: LoginProp
 
                     {/* Submit button */}
                     <button
-                        disabled
                         type="submit"
                         className="w-full bg-linear-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white font-bold py-4 px-6 rounded-xl transition-all shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3"
                     >
