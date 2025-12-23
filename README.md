@@ -37,6 +37,9 @@ La partie se termine instantanément si :
 2.  🧩 **Complétion :** Tous les mots de la grille ont été découverts.
 3.  🏳️ **Abandon :** Un joueur quitte la page ou se déconnecte volontairement.
 
+### 💬 Chat en temps réel
+Pendant la partie, les joueurs peuvent désormais communiquer en direct via une fenêtre de chat intégrée. Cela permet d'échanger des messages instantanément sans quitter l'interface de jeu.
+
 ---
 
 ## 🛠️ Stack Technique (MVP)
@@ -57,3 +60,4 @@ git clone [https://github.com/votre-repo/one-o-one.git](https://github.com/votre
 
 # Lancer l'infrastructure complète (DB, Redis, API, Front)
 docker-compose up --build
+
