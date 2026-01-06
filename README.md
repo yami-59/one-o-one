@@ -67,7 +67,7 @@ Pendant la partie, les joueurs peuvent désormais communiquer en direct via une 
 
 ---
 
-## Stack Technique (MVP)
+## Stack Technique
 
 * **Frontend :** React (Vite.js) & Tailwind CSS.
 * **Backend :** FastAPI (Python 3.12).
@@ -76,6 +76,7 @@ Pendant la partie, les joueurs peuvent désormais communiquer en direct via une 
 * **Conteneurisation :** Docker & Docker Compose.
 
 ---
+
 
 
 
